@@ -3,7 +3,7 @@ package proto
 func MarshalValues(is []interface{}) []*Value {
 	vs := make([]*Value, 0, len(is))
 	for _, i := range is {
-		v := MarshalValue(interface{}(i))
+		v := MarshalValue(i)
 		if v != nil {
 			vs = append(vs, v)
 		}
@@ -36,6 +36,18 @@ func MarshalValue(i interface{}) *Value {
 	}
 
 	return nil
+}
+
+func UnmarshalValues(vs []*Value) []interface{} {
+	is := make([]interface{}, 0, len(vs))
+
+	for _, v := range vs {
+		i := v.GetInterface()
+		if v != nil {
+			is = append(is, i)
+		}
+	}
+	return is
 }
 
 func (x *Value) GetInterface() interface{} {

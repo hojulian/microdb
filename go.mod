@@ -7,6 +7,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/nats-io/nats-server/v2 v2.2.1 // indirect
 	github.com/nats-io/nats-streaming-server v0.21.1 // indirect
+	github.com/nats-io/nats.go v1.10.1-0.20210330225420-a0b1f60162f8
 	github.com/nats-io/stan.go v0.8.3
 	github.com/pingcap/errors v0.11.4 // indirect
 	github.com/pingcap/parser v3.1.2+incompatible // indirect
