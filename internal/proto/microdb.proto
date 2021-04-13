@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package proto;
+
+message Value {
+    oneof typed_value {
+        string varchar = 1;
+        int64 integer = 2;
+        float decimal = 3;
+        google.protobuf.Timestamp date = 4;
+        google.protobuf.Timestamp timestamp = 5;
+    }
+}
+
+message WriteQueryRequest {
+    string query = 1;
+    repeated Value args = 2;
+}
+
+message WriteQueryReply {
+    bool ok = 1;
+    string msg = 2;
+}
+
+message RowUpdate {
+    repeated Value row = 1;
+}

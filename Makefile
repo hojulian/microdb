@@ -27,12 +27,12 @@ generate: ## go generate
 .PHONY: gen-proto
 gen-proto: ## generate protobuf
 	$(call print-target)
-	docker run --rm -u $(id -u) -v ${PWD}:${PWD} -w ${PWD} \
+	docker run --rm -u 1000 -v ${PWD}:${PWD} -w ${PWD} \
 		xumr0x/protobuf-nrpc:latest \
-		--proto_path=${PWD} \
-		--go_out=${PWD} \
+		--proto_path=${PWD}/internal/proto \
+		--go_out=${PWD}/internal/proto \
 		-I/usr/include/github.com/nats-rpc/nrpc \
-		${PWD}/microdb/protocol.proto
+		${PWD}/internal/proto/microdb.proto
 
 .PHONY: build
 build: ## go build
