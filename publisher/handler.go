@@ -49,9 +49,9 @@ func (m *MySQLOrigin) OnRow(e *canal.RowsEvent) error {
 	return nil
 }
 
-func MySQLHandler(mySQLHost, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
+func MySQLHandler(host, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
 	cfg := canal.NewDefaultConfig()
-	cfg.Addr = fmt.Sprintf("%s:%s", mySQLHost, port)
+	cfg.Addr = fmt.Sprintf("%s:%s", host, port)
 	cfg.User = user
 	cfg.Password = password
 	cfg.Dump.TableDB = database
