@@ -1,3 +1,4 @@
+// Package proto contains protobuf files and functions for MicroDB protocol
 package proto
 
 import (
@@ -6,6 +7,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// Protobuf conversions
+
+// MarshalValues marshals an array of any Go types into MicroDB value types.
 func MarshalValues(is []interface{}) []*Value {
 	vs := make([]*Value, 0, len(is))
 	for _, i := range is {
@@ -17,6 +21,7 @@ func MarshalValues(is []interface{}) []*Value {
 	return vs
 }
 
+// MarshalValue marshals any Go type into a MicroDB value type.
 func MarshalValue(i interface{}) *Value {
 	switch v := i.(type) {
 	case string:
@@ -40,6 +45,18 @@ func MarshalValue(i interface{}) *Value {
 			},
 		}
 
+	case bool:
+		return &Value{
+			TypedValue: &Value_Boolean{
+				Boolean: v,
+			},
+		}
+
+	case nil:
+		return &Value{
+			TypedValue: &Value_Null{},
+		}
+
 	case time.Time:
 		return &Value{
 			TypedValue: &Value_Timestamp{
@@ -51,6 +68,7 @@ func MarshalValue(i interface{}) *Value {
 	return nil
 }
 
+// UnmarshalValues unmarshals an array of MicroDB value types into Go types.
 func UnmarshalValues(vs []*Value) []interface{} {
 	is := make([]interface{}, 0, len(vs))
 
@@ -63,6 +81,7 @@ func UnmarshalValues(vs []*Value) []interface{} {
 	return is
 }
 
+// GetInterface unmarshals a MicroDB value type into a Go type.
 func (x *Value) GetInterface() interface{} {
 	switch x.GetTypedValue().(type) {
 	case *Value_Varchar:
@@ -73,6 +92,12 @@ func (x *Value) GetInterface() interface{} {
 
 	case *Value_Decimal:
 		return x.GetDecimal()
+
+	case *Value_Boolean:
+		return x.GetBoolean()
+
+	case *Value_Null:
+		return nil
 
 	case *Value_Timestamp:
 		return x.GetTimestamp().AsTime()
