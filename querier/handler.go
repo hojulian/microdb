@@ -1,21 +1,26 @@
+// Package querier contains library functions for MicroDB querier
 package querier
+
+// Querier handler implementation
 
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	"github.com/siddontang/go-mysql/client"
+	"google.golang.org/protobuf/proto"
 
 	pb "github.com/hojulian/microdb/internal/proto"
 )
 
+// Handler represents a data origin querier.
 type Handler interface {
 	Handle() error
 	Close() error
 }
 
+// MySQLQuerier represents a MySQL-based data origin querier.
 type MySQLQuerier struct {
 	table string
 	sc    stan.Conn
@@ -23,9 +28,10 @@ type MySQLQuerier struct {
 	sub   *nats.Subscription
 }
 
+// Handle starts the subscriber for handling write queries.
 func (m *MySQLQuerier) Handle() error {
 	topic := fmt.Sprintf("%s_write", m.table)
-	sub, err := m.sc.NatsConn().Subscribe(topic, tableHandler(m.table, m.sc, m.db))
+	sub, err := m.sc.NatsConn().Subscribe(topic, tableHandler(m.sc, m.db))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to write query topic: %w", err)
 	}
@@ -34,6 +40,7 @@ func (m *MySQLQuerier) Handle() error {
 	return nil
 }
 
+// Close closes all connections that the handler uses.
 func (m *MySQLQuerier) Close() error {
 	if err := m.sub.Unsubscribe(); err != nil {
 		return fmt.Errorf("failed to unsubscribe topic: %w", err)
@@ -50,7 +57,8 @@ func (m *MySQLQuerier) Close() error {
 	return nil
 }
 
-func MYSQLHandler(host, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
+// MySQLHandler returns a new instance of querier for MySQL-based data origin.
+func MySQLHandler(host, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
 	addr := fmt.Sprintf("%s:%s", host, port)
 	db, err := client.Connect(addr, user, password, database)
 	if err != nil {
@@ -64,13 +72,13 @@ func MYSQLHandler(host, port, user, password, database, table string, sc stan.Co
 	}, nil
 }
 
-func tableHandler(table string, sc stan.Conn, db *client.Conn) func(*nats.Msg) {
+func tableHandler(sc stan.Conn, db *client.Conn) func(*nats.Msg) {
 	return func(m *nats.Msg) {
 		var req pb.WriteQueryRequest
 
 		if err := proto.Unmarshal(m.Data, &req); err != nil {
 			errMsg := fmt.Errorf("failed to unmarshal write request: %w", err).Error()
-			_ = replyError(sc, m, errMsg)
+			_ = replyError(sc, m, errMsg) // TODO: Handle reply error
 			return
 		}
 
@@ -100,5 +108,9 @@ func replyError(sc stan.Conn, originMsg *nats.Msg, errMsg string) error {
 		return fmt.Errorf("failed to marshal error reply: %w", err)
 	}
 
-	return sc.Publish(originMsg.Reply, pm)
+	if err := sc.Publish(originMsg.Reply, pm); err != nil {
+		return fmt.Errorf("failed to publish reply: %w", err)
+	}
+
+	return nil
 }

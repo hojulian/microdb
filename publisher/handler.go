@@ -1,4 +1,7 @@
+// Package publisher contains library functions for MicroDB publisher
 package publisher
+
+// Publisher handler implementation
 
 import (
 	"fmt"
@@ -10,11 +13,14 @@ import (
 	pb "github.com/hojulian/microdb/internal/proto"
 )
 
+// Handler represents a data origin publisher.
 type Handler interface {
 	Handle() error
+	Close() error
 }
 
-type MySQLOrigin struct {
+// MySQLPublisher represents a MySQL-based data origin publisher.
+type MySQLPublisher struct {
 	table string
 	c     *canal.Canal
 	sc    stan.Conn
@@ -22,15 +28,31 @@ type MySQLOrigin struct {
 	canal.DummyEventHandler
 }
 
-func (m *MySQLOrigin) Handle() error {
+// Handle starts the event handler for handling new row updates from data origin.
+func (m *MySQLPublisher) Handle() error {
 	// Register a handler to handle RowsEvent
 	m.c.SetEventHandler(m)
-	defer m.sc.Close()
 
-	return m.c.Run()
+	if err := m.c.Run(); err != nil {
+		return fmt.Errorf("failed to start handler: %w", err)
+	}
+
+	return nil
 }
 
-func (m *MySQLOrigin) OnRow(e *canal.RowsEvent) error {
+// Close closes all connections that the handler uses.
+func (m *MySQLPublisher) Close() error {
+	m.c.Close()
+
+	if err := m.sc.Close(); err != nil {
+		return fmt.Errorf("failed to close nats connection: %w", err)
+	}
+
+	return nil
+}
+
+// OnRow is a callback that get triggered when a new row update is received from the data origin.
+func (m *MySQLPublisher) OnRow(e *canal.RowsEvent) error {
 	for _, r := range e.Rows {
 		update := &pb.RowUpdate{
 			Row: pb.MarshalValues(r),
@@ -38,17 +60,18 @@ func (m *MySQLOrigin) OnRow(e *canal.RowsEvent) error {
 
 		p, err := proto.Marshal(update)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal row update: %w", err)
 		}
 
 		if err := m.sc.Publish(m.table, p); err != nil {
-			return err
+			return fmt.Errorf("failed to publish row update: %w", err)
 		}
 	}
 
 	return nil
 }
 
+// MySQLHandler returns a new instance of publisher for MySQL-based data origin.
 func MySQLHandler(host, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
 	cfg := canal.NewDefaultConfig()
 	cfg.Addr = fmt.Sprintf("%s:%s", host, port)
@@ -62,7 +85,7 @@ func MySQLHandler(host, port, user, password, database, table string, sc stan.Co
 		return nil, fmt.Errorf("failed to create canal client: %w", err)
 	}
 
-	return &MySQLOrigin{
+	return &MySQLPublisher{
 		table: table,
 		c:     c,
 		sc:    sc,

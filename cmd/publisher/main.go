@@ -1,3 +1,4 @@
+// Package main contains a publisher server.
 package main
 
 import (
@@ -17,7 +18,7 @@ func main() {
 	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
 	mysqlTable := os.Getenv("MYSQL_TABLE")
 
-	sc, err := microdb.NATSConn()
+	sc, err := microdb.NATSConnFromEnv()
 	if err != nil {
 		log.Fatalf("failed to create nats connection: %v", err)
 	}
@@ -37,5 +38,9 @@ func main() {
 
 	if err := h.Handle(); err != nil {
 		log.Fatalf("failed to publish to table %s: %v", mysqlTable, err)
+	}
+
+	if err := h.Close(); err != nil {
+		log.Fatalf("failed to close connections: %v", err)
 	}
 }

@@ -1,3 +1,4 @@
+// Package main contains a querier server.
 package main
 
 import (
@@ -19,12 +20,12 @@ func main() {
 	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
 	mysqlTable := os.Getenv("MYSQL_TABLE")
 
-	sc, err := microdb.NATSConn()
+	sc, err := microdb.NATSConnFromEnv()
 	if err != nil {
 		log.Fatalf("failed to create nats connection: %v", err)
 	}
 
-	q, err := querier.MYSQLHandler(
+	q, err := querier.MySQLHandler(
 		mysqlHost,
 		mysqlPort,
 		mysqlUser,
