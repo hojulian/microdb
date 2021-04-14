@@ -9,8 +9,7 @@ message Value {
         string varchar = 1;
         int64 integer = 2;
         float decimal = 3;
-        google.protobuf.Timestamp date = 4;
-        google.protobuf.Timestamp timestamp = 5;
+        google.protobuf.Timestamp timestamp = 4;
     }
 }
 

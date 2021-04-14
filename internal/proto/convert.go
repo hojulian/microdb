@@ -1,5 +1,11 @@
 package proto
 
+import (
+	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
 func MarshalValues(is []interface{}) []*Value {
 	vs := make([]*Value, 0, len(is))
 	for _, i := range is {
@@ -33,6 +39,13 @@ func MarshalValue(i interface{}) *Value {
 				Decimal: v.(float32),
 			},
 		}
+
+	case time.Time:
+		return &Value{
+			TypedValue: &Value_Timestamp{
+				Timestamp: timestamppb.New(v),
+			},
+		}
 	}
 
 	return nil
@@ -60,6 +73,9 @@ func (x *Value) GetInterface() interface{} {
 
 	case *Value_Decimal:
 		return x.GetDecimal()
+
+	case *Value_Timestamp:
+		return x.GetTimestamp().AsTime()
 	}
 
 	return nil
