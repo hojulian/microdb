@@ -37,7 +37,10 @@ gen-proto: ## generate protobuf
 .PHONY: build
 build: ## go build
 	$(call print-target)
-	go build -o /dev/null ./...
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static" \
+		-o ./bin/microdb-publisher ./cmd/publisher/*.go
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static" \
+		-o ./bin/microdb-querier ./cmd/querier/*.go
 
 .PHONY: fmt
 fmt: ## go fmt
