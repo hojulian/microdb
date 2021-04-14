@@ -25,6 +25,12 @@ message WriteQueryRequest {
 message WriteQueryReply {
     bool ok = 1;
     string msg = 2;
+    DriverResult result = 3;
+}
+
+message DriverResult {
+    int64 resultLastInsertId = 1;
+    int64 resultRowsAffected = 2;
 }
 
 message RowUpdate {

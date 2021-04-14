@@ -2,12 +2,15 @@
 package proto
 
 import (
+	"database/sql/driver"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Protobuf conversions
+
+var _ driver.Result = &DriverResult{}
 
 // MarshalValues marshals an array of any Go types into MicroDB value types.
 func MarshalValues(is []interface{}) []*Value {
@@ -104,4 +107,15 @@ func (x *Value) GetInterface() interface{} {
 	}
 
 	return nil
+}
+
+// LastInsertId returns the database's auto-generated ID after, for example, an INSERT into a table
+// with primary key.
+func (x *DriverResult) LastInsertId() (int64, error) {
+	return x.GetResultLastInsertId(), nil
+}
+
+// RowsAffected returns the number of rows affected by the query.
+func (x *DriverResult) RowsAffected() (int64, error) {
+	return x.GetResultRowsAffected(), nil
 }

@@ -260,8 +260,9 @@ type WriteQueryReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Ok  bool   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
-	Msg string `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Ok     bool          `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Msg    string        `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Result *DriverResult `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
 }
 
 func (x *WriteQueryReply) Reset() {
@@ -310,6 +311,68 @@ func (x *WriteQueryReply) GetMsg() string {
 	return ""
 }
 
+func (x *WriteQueryReply) GetResult() *DriverResult {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+type DriverResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ResultLastInsertId int64 `protobuf:"varint,1,opt,name=resultLastInsertId,proto3" json:"resultLastInsertId,omitempty"`
+	ResultRowsAffected int64 `protobuf:"varint,2,opt,name=resultRowsAffected,proto3" json:"resultRowsAffected,omitempty"`
+}
+
+func (x *DriverResult) Reset() {
+	*x = DriverResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_microdb_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DriverResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DriverResult) ProtoMessage() {}
+
+func (x *DriverResult) ProtoReflect() protoreflect.Message {
+	mi := &file_microdb_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DriverResult.ProtoReflect.Descriptor instead.
+func (*DriverResult) Descriptor() ([]byte, []int) {
+	return file_microdb_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DriverResult) GetResultLastInsertId() int64 {
+	if x != nil {
+		return x.ResultLastInsertId
+	}
+	return 0
+}
+
+func (x *DriverResult) GetResultRowsAffected() int64 {
+	if x != nil {
+		return x.ResultRowsAffected
+	}
+	return 0
+}
+
 type RowUpdate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -321,7 +384,7 @@ type RowUpdate struct {
 func (x *RowUpdate) Reset() {
 	*x = RowUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_microdb_proto_msgTypes[4]
+		mi := &file_microdb_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -334,7 +397,7 @@ func (x *RowUpdate) String() string {
 func (*RowUpdate) ProtoMessage() {}
 
 func (x *RowUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_microdb_proto_msgTypes[4]
+	mi := &file_microdb_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -347,7 +410,7 @@ func (x *RowUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RowUpdate.ProtoReflect.Descriptor instead.
 func (*RowUpdate) Descriptor() ([]byte, []int) {
-	return file_microdb_proto_rawDescGZIP(), []int{4}
+	return file_microdb_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RowUpdate) GetRow() []*Value {
@@ -383,14 +446,24 @@ var file_microdb_proto_rawDesc = []byte{
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x71, 0x75, 0x65, 0x72, 0x79, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x71, 0x75, 0x65, 0x72, 0x79, 0x12, 0x20, 0x0a, 0x04,
 	0x61, 0x72, 0x67, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x2e, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x04, 0x61, 0x72, 0x67, 0x73, 0x22, 0x33,
+	0x74, 0x6f, 0x2e, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x04, 0x61, 0x72, 0x67, 0x73, 0x22, 0x60,
 	0x0a, 0x0f, 0x57, 0x72, 0x69, 0x74, 0x65, 0x51, 0x75, 0x65, 0x72, 0x79, 0x52, 0x65, 0x70, 0x6c,
 	0x79, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f,
 	0x6b, 0x12, 0x10, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
-	0x6d, 0x73, 0x67, 0x22, 0x2b, 0x0a, 0x09, 0x52, 0x6f, 0x77, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
-	0x12, 0x1e, 0x0a, 0x03, 0x72, 0x6f, 0x77, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x03, 0x72, 0x6f, 0x77,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6d, 0x73, 0x67, 0x12, 0x2b, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x44, 0x72, 0x69, 0x76,
+	0x65, 0x72, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74,
+	0x22, 0x6e, 0x0a, 0x0c, 0x44, 0x72, 0x69, 0x76, 0x65, 0x72, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74,
+	0x12, 0x2e, 0x0a, 0x12, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x49, 0x6e,
+	0x73, 0x65, 0x72, 0x74, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x12, 0x72, 0x65,
+	0x73, 0x75, 0x6c, 0x74, 0x4c, 0x61, 0x73, 0x74, 0x49, 0x6e, 0x73, 0x65, 0x72, 0x74, 0x49, 0x64,
+	0x12, 0x2e, 0x0a, 0x12, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x52, 0x6f, 0x77, 0x73, 0x41, 0x66,
+	0x66, 0x65, 0x63, 0x74, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x12, 0x72, 0x65,
+	0x73, 0x75, 0x6c, 0x74, 0x52, 0x6f, 0x77, 0x73, 0x41, 0x66, 0x66, 0x65, 0x63, 0x74, 0x65, 0x64,
+	0x22, 0x2b, 0x0a, 0x09, 0x52, 0x6f, 0x77, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x1e, 0x0a,
+	0x03, 0x72, 0x6f, 0x77, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x2e, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x03, 0x72, 0x6f, 0x77, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -405,25 +478,27 @@ func file_microdb_proto_rawDescGZIP() []byte {
 	return file_microdb_proto_rawDescData
 }
 
-var file_microdb_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_microdb_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_microdb_proto_goTypes = []interface{}{
 	(*Value)(nil),                 // 0: proto.Value
 	(*NullValue)(nil),             // 1: proto.NullValue
 	(*WriteQueryRequest)(nil),     // 2: proto.WriteQueryRequest
 	(*WriteQueryReply)(nil),       // 3: proto.WriteQueryReply
-	(*RowUpdate)(nil),             // 4: proto.RowUpdate
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*DriverResult)(nil),          // 4: proto.DriverResult
+	(*RowUpdate)(nil),             // 5: proto.RowUpdate
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_microdb_proto_depIdxs = []int32{
 	1, // 0: proto.Value.null:type_name -> proto.NullValue
-	5, // 1: proto.Value.timestamp:type_name -> google.protobuf.Timestamp
+	6, // 1: proto.Value.timestamp:type_name -> google.protobuf.Timestamp
 	0, // 2: proto.WriteQueryRequest.args:type_name -> proto.Value
-	0, // 3: proto.RowUpdate.row:type_name -> proto.Value
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	4, // 3: proto.WriteQueryReply.result:type_name -> proto.DriverResult
+	0, // 4: proto.RowUpdate.row:type_name -> proto.Value
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_microdb_proto_init() }
@@ -481,6 +556,18 @@ func file_microdb_proto_init() {
 			}
 		}
 		file_microdb_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DriverResult); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_microdb_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RowUpdate); i {
 			case 0:
 				return &v.state
@@ -507,7 +594,7 @@ func file_microdb_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_microdb_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
