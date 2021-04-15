@@ -5,7 +5,7 @@ import "errors"
 var schemaStore = make(map[string]*Schema)
 
 type Schema struct {
-	doType           DataOriginType
+	table            string
 	originTableQuery string
 	localTableQuery  string
 	insertQuery      string
@@ -36,4 +36,9 @@ func InsertQuery(table string) (string, error) {
 	}
 
 	return s.insertQuery, nil
+}
+
+func (s *Schema) convertOriginTableQuery() error {
+	// TODO: Implement me
+	return nil
 }

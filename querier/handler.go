@@ -4,11 +4,12 @@ package querier
 // Querier handler implementation
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
-	"github.com/siddontang/go-mysql/client"
+	_ "github.com/siddontang/go-mysql/driver"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/hojulian/microdb/internal/proto"
@@ -24,26 +25,28 @@ type Handler interface {
 type MySQLQuerier struct {
 	table string
 	sc    stan.Conn
-	db    *client.Conn
-	sub   *nats.Subscription
+	db    *sql.DB
+	sub   []*nats.Subscription
 }
 
-// Handle starts the subscriber for handling write queries.
+// Handle starts the subscriber for handling write and direct read queries.
 func (m *MySQLQuerier) Handle() error {
-	topic := fmt.Sprintf("%s_write", m.table)
-	sub, err := m.sc.NatsConn().Subscribe(topic, tableHandler(m.sc, m.db))
+	writeTopic := fmt.Sprintf("%s_write", m.table)
+	wSub, err := m.sc.NatsConn().Subscribe(writeTopic, tableWriteHandler(m.sc, m.db))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to write query topic: %w", err)
 	}
-	m.sub = sub
+	m.sub = append(m.sub, wSub)
 
 	return nil
 }
 
 // Close closes all connections that the handler uses.
 func (m *MySQLQuerier) Close() error {
-	if err := m.sub.Unsubscribe(); err != nil {
-		return fmt.Errorf("failed to unsubscribe topic: %w", err)
+	for _, sub := range m.sub {
+		if err := sub.Unsubscribe(); err != nil {
+			return fmt.Errorf("failed to unsubscribe topic: %w", err)
+		}
 	}
 
 	if err := m.sc.Close(); err != nil {
@@ -59,8 +62,8 @@ func (m *MySQLQuerier) Close() error {
 
 // MySQLHandler returns a new instance of querier for MySQL-based data origin.
 func MySQLHandler(host, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
-	addr := fmt.Sprintf("%s:%s", host, port)
-	db, err := client.Connect(addr, user, password, database)
+	dsn := fmt.Sprintf("%s:%s@%s:%s?%s", user, password, host, port, database)
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to data origin: %w", err)
 	}
@@ -72,9 +75,9 @@ func MySQLHandler(host, port, user, password, database, table string, sc stan.Co
 	}, nil
 }
 
-func tableHandler(sc stan.Conn, db *client.Conn) func(*nats.Msg) {
+func tableWriteHandler(sc stan.Conn, db *sql.DB) func(*nats.Msg) {
 	return func(m *nats.Msg) {
-		var req pb.WriteQueryRequest
+		var req pb.QueryRequest
 
 		if err := proto.Unmarshal(m.Data, &req); err != nil {
 			errMsg := fmt.Errorf("failed to unmarshal write request: %w", err).Error()
@@ -82,14 +85,14 @@ func tableHandler(sc stan.Conn, db *client.Conn) func(*nats.Msg) {
 			return
 		}
 
-		r, err := db.Execute(req.Query, pb.UnmarshalValues(req.Args)...)
+		r, err := db.Exec(req.Query, pb.UnmarshalValues(req.Args)...)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to execute database query: %w", err).Error()
 			_ = replyError(sc, m, errMsg)
 			return
 		}
 
-		if r.AffectedRows == 0 {
+		if ra, err := r.RowsAffected(); ra == 0 || err != nil {
 			errMsg := "no rows affected"
 			_ = replyError(sc, m, errMsg)
 			return

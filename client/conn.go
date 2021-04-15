@@ -1,59 +1,34 @@
+// Package client represents a MicroDB client
 package client
+
+// MicroDB client is a "database/sql" driver.
 
 import (
 	"context"
-	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/nats-io/stan.go"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/hojulian/microdb/internal/proto"
+	"github.com/hojulian/microdb/microdb"
+	mquery "github.com/hojulian/microdb/query"
 )
 
 var (
-	_ driver.Conn   = &Conn{}
-	_ driver.Rows   = &Rows{}
-	_ driver.Result = &Result{}
+	_ driver.Conn           = &Conn{}
+	_ driver.QueryerContext = &Conn{}
+	_ driver.ExecerContext  = &Conn{}
+	_ driver.QueryerContext = &Conn{}
 )
 
+// Conn is a connection to MicroDB system. It is not used concurrently by multiple goroutines.
 type Conn struct {
 	sc     stan.Conn
-	db     *sql.DB
+	sqc    driver.Conn
 	tables map[string]stan.Subscription
-}
-
-func newConn(sc stan.Conn, db *sql.DB, tables map[string]stan.Subscription) (*Conn, error) {
-	c := &Conn{
-		sc:     sc,
-		db:     db,
-		tables: tables,
-	}
-
-	for t, s := range c.tables {
-		if s == nil {
-			sc, err := sc.Subscribe(t, newNATSSubsriptionHandler(db), stan.DeliverAllAvailable())
-			if err != nil {
-				return nil, fmt.Errorf("failed to subscribe to table change: %w", err)
-			}
-			c.tables[t] = sc
-		}
-	}
-
-	return c, nil
-}
-
-func newNATSSubsriptionHandler(db *sql.DB) stan.MsgHandler {
-	return func(m *stan.Msg) {
-		var ru pb.RowUpdate
-
-		if err := proto.Unmarshal(m.Data, &ru); err != nil {
-			log.Printf("failed to parse row update: %v\n", err)
-			return
-		}
-	}
 }
 
 func (c *Conn) Prepare(query string) (driver.Stmt, error) {
@@ -71,48 +46,79 @@ func (c *Conn) Close() error {
 		}
 	}
 
-	if err := c.db.Close(); err != nil {
+	if err := c.sqc.Close(); err != nil {
 		return fmt.Errorf("failed to close local sqlite3 connection: %w", err)
 	}
 
 	return nil
 }
 
-func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.Value) (driver.Rows, error) {
-	rs, err := c.db.QueryContext(ctx, query, args)
+func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	q, err := mquery.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query local sqlite3: %w", err)
+		return nil, fmt.Errorf("invalid query: %w", err)
+	}
+	if q.QueryType != mquery.QueryTypeSelect {
+		return nil, fmt.Errorf("unsupported query type: %w", err)
 	}
 
-	return &Rows{
-		rows: rs,
-	}, nil
-}
+	switch q.DestinationType {
+	case mquery.DestinationTypeLocal:
+		rs, err := c.sqc.(driver.QueryerContext).QueryContext(ctx, query, args)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query local sqlite3: %w", err)
+		}
+		return rs, nil
 
-type Rows struct {
-	rows *sql.Rows
-}
+	case mquery.DestinationTypeOrigin:
+		d, err := microdb.GetDataOrigin(q.GetDestinationTable())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data origin for table: %w", err)
+		}
 
-func (r *Rows) Columns() []string {
-	if rs, err := r.rows.Columns(); err == nil {
-		return rs
+		db, err := d.GetDB()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get database connector for data origin: %w", err)
+		}
+
+		dbc, err := db.Conn(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create database connection for data origin: %w", err)
+		}
+
+		rs, err := dbc.QueryContext(ctx, query, normalizeDriverValues(args)...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query data origin: %w", err)
+		}
+
+		return &dRows{
+			sRows: rs,
+		}, nil
 	}
 
-	return nil
+	return nil, errors.New("unsupported destination type")
 }
 
-func (r *Rows) Next(dest []driver.Value) error {
-	return r.rows.Scan(dest)
+func normalizeDriverValues(ds []driver.NamedValue) []interface{} {
+	is := make([]interface{}, 0, len(ds))
+	for _, d := range ds {
+		is = append(is, d.Value)
+	}
+	return is
 }
 
-func (r *Rows) Close() error {
-	return r.rows.Close()
-}
+func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	q, err := mquery.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("invalid query: %w", err)
+	}
+	if q.QueryType == mquery.QueryTypeSelect {
+		return nil, errors.New("for select query, please use QueryContext")
+	}
 
-func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Value) (driver.Result, error) {
-	req := &pb.WriteQueryRequest{
-		Query: query,
-		Args:  normalizeDriverValues(args),
+	req := &pb.QueryRequest{
+		Query: q.SQL(),
+		Args:  pb.MarshalDriverValues(args),
 	}
 
 	p, err := proto.Marshal(req)
@@ -120,8 +126,11 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Valu
 		return nil, fmt.Errorf("failed to marshal write request: %w", err)
 	}
 
-	// Forward to egress directly, it will figure out the type conversion.
-	msg, err := c.sc.NatsConn().RequestWithContext(ctx, "ip_addresses_write", p)
+	dest := q.GetDestinationTable()
+	destTopic := fmt.Sprintf("%s_write", dest)
+
+	// Forward to querier directly, it will figure out the type conversion.
+	msg, err := c.sc.NatsConn().RequestWithContext(ctx, destTopic, p)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
@@ -135,40 +144,5 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Valu
 		return nil, fmt.Errorf("failed to execute query: %s", res.GetMsg())
 	}
 
-	return nil, nil
-}
-
-func normalizeDriverValues(args []driver.Value) []*pb.Value {
-	norm := make([]*pb.Value, 0, len(args))
-	for _, a := range args {
-		v := pb.MarshalValue(interface{}(a))
-		if v != nil {
-			norm = append(norm, v)
-		} else {
-			log.Printf("failed to normalize argument: %v", a)
-		}
-	}
-	return norm
-}
-
-type Result struct {
-	lastInsertId int64
-	rowsAffected int64
-	err          error
-}
-
-func (re *Result) LastInsertId() (int64, error) {
-	if re.err != nil {
-		return 0, fmt.Errorf("failed to retrieve last insert ID: %w", re.err)
-	}
-
-	return re.lastInsertId, nil
-}
-
-func (re *Result) RowsAffected() (int64, error) {
-	if re.err != nil {
-		return 0, fmt.Errorf("failed to retrieve rows affected: %w", re.err)
-	}
-
-	return re.rowsAffected, nil
+	return res.GetResult(), nil
 }

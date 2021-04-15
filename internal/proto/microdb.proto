@@ -17,7 +17,7 @@ message Value {
 
 message NullValue {}
 
-message WriteQueryRequest {
+message QueryRequest {
     string query = 1;
     repeated Value args = 2;
 }

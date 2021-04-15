@@ -1,96 +1,110 @@
+// Package client represents a MicroDB client
 package client
 
 import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"log"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/mattn/go-sqlite3"
 	"github.com/nats-io/stan.go"
+	"google.golang.org/protobuf/proto"
+
+	pb "github.com/hojulian/microdb/internal/proto"
+	"github.com/hojulian/microdb/microdb"
 )
 
+func init() {
+	sql.Register("microdb", &Driver{})
+}
+
 type Driver struct {
-	clientID      string
+	cfg *DriverCfg
+
+	initialized bool
+	drv         *sqlite3.SQLiteDriver
+	db          *sql.DB
+	sc          stan.Conn
+	tables      map[string]stan.Subscription
+}
+
+type DriverCfg struct {
+	dsn           string
+	natsClientID  string
 	natsClusterID string
 	natsHost      string
 	natsPort      string
-	tables        map[string]stan.Subscription
+	tables        []string
 }
 
 func (d *Driver) Open(name string) (driver.Conn, error) {
-	if err := d.parseDSN(name); err != nil {
+	cfg, err := parseDSN(name)
+	if err != nil {
 		return nil, fmt.Errorf("invalid dsn: %w", err)
 	}
+	d.cfg = cfg
 
-	sc, err := newNATSConn(d.clientID, d.natsClusterID, d.natsHost, d.natsPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to nats: %w", err)
+	if !d.initialized {
+		if ierr := d.init(); ierr != nil {
+			return nil, fmt.Errorf("failed to initialize driver: %w", ierr)
+		}
 	}
 
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared&mode=memory&_journal=memory&_cache_size=-64000")
+	sqc, err := d.drv.Open(d.cfg.dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to local sqlite3: %w", err)
 	}
 
-	return newConn(sc, db, d.tables)
+	return &Conn{
+		sc:  d.sc,
+		sqc: sqc,
+	}, nil
 }
 
-func newNATSConn(clientID, natsClusterID, natsHost, natsPort string) (stan.Conn, error) {
-	natsURL := fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
-
-	sc, err := stan.Connect(natsClusterID, clientID, stan.NatsURL(natsURL))
-	if err != nil {
-		log.Printf("failed to connect to nats: %v\n", err)
-		return nil, fmt.Errorf("failed to connect to nats cluster: %w", err)
+func parseDSN(dsn string) (*DriverCfg, error) {
+	// dsn format:
+	//    natsClientID=... natsHost=... natsPort=... tables=...,...
+	cfg := &DriverCfg{
+		dsn: "file::memory:?cache=shared&mode=memory&_journal=memory&_cache_size=-64000",
 	}
 
-	return sc, nil
-}
-
-func (d *Driver) parseDSN(dsn string) error {
-	// dsn format:
-	//    clientID=... natsHost=... natsPort=... tables=...,...
 	opts, err := parseDSNMap(dsn)
 	if err != nil {
-		return fmt.Errorf("failed to parse dsn: %w", err)
+		return nil, fmt.Errorf("failed to parse dsn: %w", err)
 	}
 
-	if v, ok := opts["clientID"]; ok {
-		d.clientID = v
+	if v, ok := opts["natsClientID"]; ok {
+		cfg.natsClientID = v
 	} else {
-		return fmt.Errorf("missing clientID")
+		return nil, fmt.Errorf("missing clientID")
 	}
 
 	if v, ok := opts["natsClusterID"]; ok {
-		d.natsClusterID = v
+		cfg.natsClusterID = v
 	} else {
-		return fmt.Errorf("missing NATS clusterID")
+		return nil, fmt.Errorf("missing NATS clusterID")
 	}
 
 	if v, ok := opts["natsHost"]; ok {
-		d.natsHost = v
+		cfg.natsHost = v
 	} else {
-		return fmt.Errorf("missing NATS host")
+		return nil, fmt.Errorf("missing NATS host")
 	}
 
 	if v, ok := opts["natsPort"]; ok {
-		d.natsPort = v
+		cfg.natsPort = v
 	} else {
-		return fmt.Errorf("missing NATS port")
+		return nil, fmt.Errorf("missing NATS port")
 	}
 
 	if v, ok := opts["tables"]; ok {
-		d.tables = make(map[string]stan.Subscription)
-		for _, t := range strings.Split(v, ",") {
-			d.tables[t] = nil
-		}
+		cfg.tables = strings.Split(v, ",")
 	} else {
-		return fmt.Errorf("missing tables")
+		return nil, fmt.Errorf("missing tables")
 	}
 
-	return nil
+	return cfg, nil
 }
 
 func parseDSNMap(dsn string) (map[string]string, error) {
@@ -108,4 +122,86 @@ func parseDSNMap(dsn string) (map[string]string, error) {
 	}
 
 	return opts, nil
+}
+
+func (d *Driver) init() error {
+	drv := &sqlite3.SQLiteDriver{}
+	db := sql.OpenDB(dsnConnector{dsn: d.cfg.dsn, driver: drv})
+	db.SetConnMaxLifetime(-1)
+
+	sc, err := microdb.NATSConn(
+		d.cfg.natsHost,
+		d.cfg.natsPort,
+		d.cfg.natsClusterID,
+		d.cfg.natsClientID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to connect to nats cluster: %w", err)
+	}
+
+	d.drv = drv
+	d.db = db
+	d.sc = sc
+
+	for _, t := range d.cfg.tables {
+		if err := createTable(d.db, t); err != nil {
+			return fmt.Errorf("failed to create table: %w", err)
+		}
+
+		if err := d.subscribeTable(t); err != nil {
+			return fmt.Errorf("failed to subscribe to table: %w", err)
+		}
+	}
+
+	d.initialized = true
+
+	return nil
+}
+
+func (d *Driver) subscribeTable(table string) error {
+	sub, err := d.sc.Subscribe(table, tableHandler(d.db, table), stan.DeliverAllAvailable())
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to nats: %w", err)
+	}
+
+	d.tables[table] = sub
+	return nil
+}
+
+func createTable(db *sql.DB, table string) error {
+	tq, err := microdb.LocalTableQuery(table)
+	if err != nil {
+		return fmt.Errorf("failed to get table schema query: %w", err)
+	}
+
+	_, err = db.Exec(tq)
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return nil
+}
+
+func tableHandler(db *sql.DB, table string) stan.MsgHandler {
+	return func(m *stan.Msg) {
+		var ru pb.RowUpdate
+
+		if err := proto.Unmarshal(m.Data, &ru); err != nil {
+			panic(fmt.Errorf("failed to parse row update: %w", err))
+		}
+
+		iq, err := microdb.InsertQuery(table)
+		if err != nil {
+			panic(fmt.Errorf("failed to get insert query: %w", err))
+		}
+
+		r, err := db.Exec(iq, pb.UnmarshalValues(ru.GetRow())...)
+		if err != nil {
+			panic(fmt.Errorf("failed to execute query: %w", err))
+		}
+
+		if ra, err := r.RowsAffected(); ra == 0 || err != nil {
+			panic(fmt.Errorf("failed to update table: %w or no rows affected", err))
+		}
+	}
 }

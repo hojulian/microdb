@@ -24,6 +24,18 @@ func MarshalValues(is []interface{}) []*Value {
 	return vs
 }
 
+// MarshalDriverValues marshals an array of database driver values into MicroDB value types.
+func MarshalDriverValues(args []driver.NamedValue) []*Value {
+	vs := make([]*Value, 0, len(args))
+	for _, a := range args {
+		v := MarshalValue(a.Value)
+		if v != nil {
+			vs = append(vs, v)
+		}
+	}
+	return vs
+}
+
 // MarshalValue marshals any Go type into a MicroDB value type.
 func MarshalValue(i interface{}) *Value {
 	switch v := i.(type) {
