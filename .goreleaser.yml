@@ -12,6 +12,7 @@ builds:
     - linux
   goarch:
     - amd64
+
 - id: microdb-querier
   main: ./cmd/querier/main.go
   binary: microdb-querier
@@ -29,3 +30,37 @@ archives:
 release:
   github:
   prerelease: auto
+dockers:
+  - goos: linux
+    goarch: amd64
+    goarm: ''
+    image_templates:
+    - "microdb/publisher:latest"
+    - "microdb/publisher:{{ .Tag }}"
+    skip_push: false
+    dockerfile: Dockerfile.publisher
+    use_buildx: true
+    build_flag_templates:
+    - "--pull"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.title={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
+    - "--platform=linux/arm64"
+
+  - goos: linux
+    goarch: amd64
+    goarm: ''
+    image_templates:
+    - "microdb/querier:latest"
+    - "microdb/querier:{{ .Tag }}"
+    skip_push: false
+    dockerfile: Dockerfile.querier
+    use_buildx: true
+    build_flag_templates:
+    - "--pull"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.title={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
+    - "--platform=linux/arm64"

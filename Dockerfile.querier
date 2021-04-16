@@ -1,0 +1,22 @@
+  FROM golang:1.16 as builder
+
+LABEL maintainer="Julian Ho <julianho@brandeis.edu>"
+
+RUN mkdir /build
+ADD . /build/
+WORKDIR /build
+
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static" \
+		-o /bin/microdb-querier ./cmd/querier/*.go
+
+# Build image
+FROM alpine:latest
+
+RUN apk update && \
+    apk add ca-certificates mariadb-client && \
+    rm -rf /var/cache/apk/*
+
+COPY --from=builder /bin/microdb-querier /app/
+WORKDIR /app
+
+CMD ./microdb-querier
