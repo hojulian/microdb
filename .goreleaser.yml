@@ -2,7 +2,17 @@ before:
   hooks:
     - go mod download
 builds:
-- main: ./cmd/publisher/main.go
+- id: microdb-publisher
+  main: ./cmd/publisher/main.go
+  env:
+    - CGO_ENABLED=0
+  goos:
+    - darwin
+    - linux
+  goarch:
+    - amd64
+- id: microdb-querier
+  main: ./cmd/querier/main.go
   env:
     - CGO_ENABLED=0
   goos:
