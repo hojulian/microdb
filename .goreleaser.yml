@@ -4,6 +4,7 @@ before:
 builds:
 - id: microdb-publisher
   main: ./cmd/publisher/main.go
+  binary: microdb-publisher
   env:
     - CGO_ENABLED=0
   goos:
@@ -13,6 +14,7 @@ builds:
     - amd64
 - id: microdb-querier
   main: ./cmd/querier/main.go
+  binary: microdb-querier
   env:
     - CGO_ENABLED=0
   goos:
