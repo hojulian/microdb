@@ -15,12 +15,14 @@ import (
 	"github.com/hojulian/microdb/microdb"
 )
 
+//nolint // Init used for registering this driver on startup
 func init() {
 	sql.Register("microdb", &Driver{})
 }
 
+// Driver is the MicroDB driver that implements database/sql/driver.
 type Driver struct {
-	cfg *DriverCfg
+	cfg *driverCfg
 
 	initialized bool
 	drv         *sqlite3.SQLiteDriver
@@ -29,7 +31,7 @@ type Driver struct {
 	tables      map[string]stan.Subscription
 }
 
-type DriverCfg struct {
+type driverCfg struct {
 	dsn           string
 	natsClientID  string
 	natsClusterID string
@@ -38,6 +40,17 @@ type DriverCfg struct {
 	tables        []string
 }
 
+// Open returns a new connection to the database.
+// The name is a string in a driver-specific format.
+// dsn format:
+//    natsClientID=... natsHost=... natsPort=... tables=...,...
+//
+// Open may return a cached connection (one previously
+// closed), but doing so is unnecessary; the sql package
+// maintains a pool of idle connections for efficient re-use.
+//
+// The returned connection is only used by one goroutine at a
+// time.
 func (d *Driver) Open(name string) (driver.Conn, error) {
 	cfg, err := parseDSN(name)
 	if err != nil {
@@ -62,10 +75,10 @@ func (d *Driver) Open(name string) (driver.Conn, error) {
 	}, nil
 }
 
-func parseDSN(dsn string) (*DriverCfg, error) {
+func parseDSN(dsn string) (*driverCfg, error) {
 	// dsn format:
 	//    natsClientID=... natsHost=... natsPort=... tables=...,...
-	cfg := &DriverCfg{
+	cfg := &driverCfg{
 		dsn: "file::memory:?cache=shared&mode=memory&_journal=memory&_cache_size=-64000",
 	}
 

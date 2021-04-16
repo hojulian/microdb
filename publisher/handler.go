@@ -1,7 +1,7 @@
-// Package publisher contains library functions for MicroDB publisher
+// Package publisher contains library functions for MicroDB publisher.
 package publisher
 
-// Publisher handler implementation
+// Publisher handler implementation.
 
 import (
 	"fmt"

@@ -10,7 +10,7 @@ dev: clean install generate build fmt test mod-tidy build-snapshot
 
 .PHONY: ci
 ci: ## CI build
-ci: dev-no-lint diff
+ci: dev diff
 
 .PHONY: clean
 clean: ## remove files created during build

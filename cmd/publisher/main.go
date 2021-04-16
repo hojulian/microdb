@@ -4,12 +4,13 @@ package main
 import (
 	"os"
 
+	"github.com/hojulian/microdb/internal/logger"
 	"github.com/hojulian/microdb/microdb"
 	"github.com/hojulian/microdb/publisher"
 )
 
 func main() {
-	log := microdb.Logger("publisher")
+	log := logger.Logger("publisher")
 
 	mysqlHost := os.Getenv("MYSQL_HOST")
 	mysqlPort := os.Getenv("MYSQL_PORT")

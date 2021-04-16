@@ -1,3 +1,5 @@
+// Package query provides query building and parsing functionalities used by both MicroDB client
+// and external users.
 package query
 
 import (
@@ -6,6 +8,8 @@ import (
 
 	"github.com/cube2222/octosql/parser/sqlparser"
 )
+
+// Parser provides all functionalities for parsing a SQL query.
 
 func parseQuery(query string) (*QueryStmt, error) {
 	stmt, err := sqlparser.Parse(query)
@@ -26,8 +30,8 @@ func parseStmt(stmt sqlparser.Statement) (*QueryStmt, error) {
 	switch s := stmt.(type) {
 	case *sqlparser.Select:
 		q := &QueryStmt{
-			QueryType:       QueryTypeSelect,
-			DestinationType: DestinationTypeLocal,
+			queryType:       QueryTypeSelect,
+			destinationType: DestinationTypeLocal,
 		}
 		if err := parseSelect(s, q); err != nil {
 			return nil, fmt.Errorf("failed to parse select statement: %w", err)
@@ -36,8 +40,8 @@ func parseStmt(stmt sqlparser.Statement) (*QueryStmt, error) {
 
 	case *sqlparser.Insert:
 		q := &QueryStmt{
-			QueryType:       QueryTypeInsert,
-			DestinationType: DestinationTypeOrigin,
+			queryType:       QueryTypeInsert,
+			destinationType: DestinationTypeOrigin,
 		}
 		if err := parseInsert(s, q); err != nil {
 			return nil, fmt.Errorf("failed to parse insert statement: %w", err)
@@ -46,8 +50,8 @@ func parseStmt(stmt sqlparser.Statement) (*QueryStmt, error) {
 
 	case *sqlparser.Update:
 		q := &QueryStmt{
-			QueryType:       QueryTypeUpdate,
-			DestinationType: DestinationTypeOrigin,
+			queryType:       QueryTypeUpdate,
+			destinationType: DestinationTypeOrigin,
 		}
 		if err := parseUpdate(s, q); err != nil {
 			return nil, fmt.Errorf("failed to parse udpate statement: %w", err)
@@ -170,6 +174,7 @@ func parseTableValuedFunctionArgument(expr sqlparser.TableValuedFunctionArgument
 	return errors.New("invalid table valued function argument")
 }
 
+//nolint // Allow parse method to exceed suggested method size.
 func parseExpression(expr sqlparser.Expr, qs *QueryStmt) error {
 	switch expr := expr.(type) {
 	case *sqlparser.UnaryExpr:

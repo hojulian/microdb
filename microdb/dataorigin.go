@@ -1,3 +1,5 @@
+// Package microdb includes all application level components used either with MicroDB client or
+// with in MicroDB system.
 package microdb
 
 import (
@@ -6,32 +8,43 @@ import (
 	"fmt"
 	"strings"
 
+	// Register local database driver.
 	_ "github.com/mattn/go-sqlite3"
+	// Register data origin database drivers.
 	_ "github.com/siddontang/go-mysql/driver"
 )
 
 const (
-	DataOriginTypeMySQL   = "mysql"
+	// DataOriginTypeMySQL represents a MySQL-based data origin.
+	DataOriginTypeMySQL = "mysql"
+	// DataOriginTypeSQLite3 represents a SQLite3-based data origin.
 	DataOriginTypeSQLite3 = "sqlite3"
 )
 
+//nolint // Used as internal data origin mapping.
 var dataOrigins = make(map[string]*DataOrigin)
 
+// DataOriginType represents a data origin database type.
 type DataOriginType string
 
+// DataOrigin represents a table in MicroDB.
+// For details, please refers to documentation.
 type DataOrigin struct {
 	schema *Schema
-	cfg    *DataOriginCfg
+	cfg    *dataOriginCfg
 	db     *sql.DB
 }
 
-type DataOriginCfg struct {
+type dataOriginCfg struct {
 	originType DataOriginType
 	dsn        string
 }
 
+// DataOriginOption represents options for creating a DataOrigin.
+// This is used with AddDataOrigin().
 type DataOriginOption func() (*DataOrigin, error)
 
+// WithMySQLDataOrigin creates options for using a new MySQL-based data origin.
 func WithMySQLDataOrigin(host, port, user, password, database string, schema *Schema) DataOriginOption {
 	return func() (*DataOrigin, error) {
 		cfg, err := mySQLDataOriginCfg(host, port, user, password, database)
@@ -52,13 +65,13 @@ func WithMySQLDataOrigin(host, port, user, password, database string, schema *Sc
 	}
 }
 
-func mySQLDataOriginCfg(host, port, user, password, database string) (*DataOriginCfg, error) {
+func mySQLDataOriginCfg(host, port, user, password, database string) (*dataOriginCfg, error) {
 	dsn := fmt.Sprintf("%s:%s@%s:%s?%s", user, password, host, port, database)
 	if err := validateMySQLDSN(dsn); err != nil {
 		return nil, fmt.Errorf("failed to create data origin config: %w", err)
 	}
 
-	return &DataOriginCfg{
+	return &dataOriginCfg{
 		originType: DataOriginTypeMySQL,
 		dsn:        dsn,
 	}, nil
@@ -69,7 +82,7 @@ func mySQLDataOriginCfg(host, port, user, password, database string) (*DataOrigi
 func validateMySQLDSN(dsn string) error {
 	lastIndex := strings.LastIndex(dsn, "@")
 	seps := []string{dsn[:lastIndex], dsn[lastIndex+1:]}
-	if len(seps) != 2 {
+	if len(seps) != 2 { //nolint // Checker for dsn format.
 		return errors.New("invalid dsn, must user:password@addr[?db]")
 	}
 
@@ -84,6 +97,7 @@ func validateMySQLDSN(dsn string) error {
 	return nil
 }
 
+// AddDataOrigin adds a new data origin.
 func AddDataOrigin(table string, opt DataOriginOption) error {
 	d, err := opt()
 	if err != nil {
@@ -94,6 +108,7 @@ func AddDataOrigin(table string, opt DataOriginOption) error {
 	return nil
 }
 
+// GetDataOrigin retreives a DataOrigin given the table name.
 func GetDataOrigin(table string) (*DataOrigin, error) {
 	d, ok := dataOrigins[table]
 	if !ok {
@@ -103,6 +118,7 @@ func GetDataOrigin(table string) (*DataOrigin, error) {
 	return d, nil
 }
 
+// GetDB returns a database connection to a specific data origin.
 func (d *DataOrigin) GetDB() (*sql.DB, error) {
 	if d.db != nil {
 		return d.db, nil

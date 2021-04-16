@@ -1,3 +1,4 @@
+// Package client represents a MicroDB client.
 package client
 
 import (
@@ -7,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 )
+
+// This file contains mostly helper structs for integrating with sql.Driver.
 
 var (
 	_ driver.Connector = dsnConnector{}
@@ -19,6 +22,7 @@ type dsnConnector struct {
 }
 
 func (t dsnConnector) Connect(_ context.Context) (driver.Conn, error) {
+	//nolint // Low level sql method, no need for error wrapping
 	return t.driver.Open(t.dsn)
 }
 

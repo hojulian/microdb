@@ -93,7 +93,7 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 	if err != nil {
 		return nil, fmt.Errorf("invalid query: %w", err)
 	}
-	if q.QueryType != mquery.QueryTypeSelect {
+	if q.GetQueryType() != mquery.QueryTypeSelect {
 		return nil, fmt.Errorf("unsupported query type: %w", err)
 	}
 
@@ -165,7 +165,7 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 	if err != nil {
 		return nil, fmt.Errorf("invalid query: %w", err)
 	}
-	if q.QueryType == mquery.QueryTypeSelect {
+	if q.GetQueryType() == mquery.QueryTypeSelect {
 		return nil, errors.New("for select query, please use QueryContext")
 	}
 

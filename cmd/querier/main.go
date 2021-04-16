@@ -6,12 +6,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/hojulian/microdb/internal/logger"
 	"github.com/hojulian/microdb/microdb"
 	"github.com/hojulian/microdb/querier"
 )
 
 func main() {
-	log := microdb.Logger("querier")
+	log := logger.Logger("querier")
 
 	mysqlHost := os.Getenv("MYSQL_HOST")
 	mysqlPort := os.Getenv("MYSQL_PORT")

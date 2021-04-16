@@ -1,7 +1,7 @@
-// Package querier contains library functions for MicroDB querier
+// Package querier contains library functions for MicroDB querier.
 package querier
 
-// Querier handler implementation
+// Querier handler implementation.
 
 import (
 	"database/sql"
@@ -9,8 +9,10 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
-	_ "github.com/siddontang/go-mysql/driver"
 	"google.golang.org/protobuf/proto"
+
+	// Register database driver.
+	_ "github.com/siddontang/go-mysql/driver"
 
 	pb "github.com/hojulian/microdb/internal/proto"
 )
