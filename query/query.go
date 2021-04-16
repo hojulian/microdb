@@ -69,7 +69,7 @@ func (q *QueryStmt) OnOrigin() *QueryStmt {
 
 // SQL converts the query into string format.
 func (q *QueryStmt) SQL() string {
-	return q.query
+	return q.originQuery
 }
 
 // GetDestinationTable returns the destination table.
