@@ -23,5 +23,11 @@
         "--fast"
     ],
 
+    // go test
+    "go.testEnvVars": {
+        "CGO_ENABLED": "1",
+    },
+    "go.testTimeout": "5m",
+
     "editor.rulers": [100]
 }
