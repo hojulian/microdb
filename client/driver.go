@@ -147,6 +147,8 @@ func (d *Driver) init() error {
 		d.cfg.natsPort,
 		d.cfg.natsClusterID,
 		d.cfg.natsClientID,
+		nil,
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to connect to nats cluster: %w", err)
