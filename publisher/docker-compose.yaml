@@ -1,0 +1,49 @@
+version: '3.7'
+services:
+  dataorigin:
+    container_name: mysql
+    hostname: mysql
+    image: microdb/testdb:client-test
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+    command: >
+      --server-id=1
+      --default-authentication-plugin=mysql_native_password
+      --datadir=/var/lib/mysql
+      --log-bin=/var/lib/mysql/mysql-bin.log
+      --binlog_do_db=test
+      --binlog-format=row
+    networks:
+      microdb-net:
+  nats:
+    container_name: nats
+    hostname: nats
+    image: nats:2.2.1
+    ports:
+      - '4222:4222'
+      - '8222:8222'
+    command: >
+      -p=4222
+      -m=8222
+    networks:
+      microdb-net:
+  stan:
+    container_name: stan
+    hostname: stan
+    image: nats-streaming:0.21.2
+    ports:
+      - '4222'
+      - '8222'
+    command: >
+      -p=4222
+      -m=8222
+      -cid=nats-cluster
+      -store=file
+      -dir=store
+      -nats_server=nats://nats:4222
+    networks:
+      microdb-net:
+networks:
+  microdb-net:

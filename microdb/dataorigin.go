@@ -5,14 +5,11 @@ package microdb
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/huandu/go-sqlbuilder"
 	// Register local database driver.
+	"github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
-
-	// Register data origin database drivers.
-	_ "github.com/siddontang/go-mysql/driver"
 )
 
 const (
@@ -61,15 +58,12 @@ type DataOriginOption func() (*DataOrigin, error)
 // WithMySQLDataOrigin creates options for using a new MySQL-based data origin.
 func WithMySQLDataOrigin(host, port, user, password, database string, opt SchemaOption) DataOriginOption {
 	return func() (*DataOrigin, error) {
-		cfg, err := mySQLDataOriginCfg(host, port, user, password, database)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create data origin: %w", err)
-		}
-
 		s, err := opt()
 		if err != nil {
 			return nil, fmt.Errorf("invalid schema: %w", err)
 		}
+
+		cfg := mySQLDataOriginCfg(host, port, user, password, database)
 
 		return &DataOrigin{
 			schema: s,
@@ -78,36 +72,19 @@ func WithMySQLDataOrigin(host, port, user, password, database string, opt Schema
 	}
 }
 
-func mySQLDataOriginCfg(host, port, user, password, database string) (*dataOriginCfg, error) {
-	dsn := fmt.Sprintf("%s:%s@%s:%s?%s", user, password, host, port, database)
-	if err := validateMySQLDSN(dsn); err != nil {
-		return nil, fmt.Errorf("failed to create data origin config: %w", err)
-	}
+func mySQLDataOriginCfg(host, port, user, password, database string) *dataOriginCfg {
+	mCfg := mysql.NewConfig()
+	mCfg.Addr = fmt.Sprintf("%s:%s", host, port)
+	mCfg.User = user
+	mCfg.Passwd = password
+	mCfg.DBName = database
+
+	mCfg.ParseTime = true
 
 	return &dataOriginCfg{
 		originType: DataOriginTypeMySQL,
-		dsn:        dsn,
-	}, nil
-}
-
-// modified from:
-// https://github.com/go-mysql-org/go-mysql/blob/8801d838aa3ae1063b4b17827a0d33cf63168853/driver/driver.go#L22
-func validateMySQLDSN(dsn string) error {
-	lastIndex := strings.LastIndex(dsn, "@")
-	seps := []string{dsn[:lastIndex], dsn[lastIndex+1:]}
-	if len(seps) != 2 { //nolint // Checker for dsn format.
-		return fmt.Errorf("invalid dsn, must user:password@addr[?db], got: %s", dsn)
+		dsn:        mCfg.FormatDSN(),
 	}
-
-	if ss := strings.Split(seps[0], ":"); !(len(ss) >= 1) {
-		return fmt.Errorf("invalid dsn, must user:password@addr[?db], got: %s", dsn)
-	}
-
-	if ss := strings.Split(seps[1], "?"); !(len(ss) >= 1) {
-		return fmt.Errorf("invalid dsn, must user:password@addr[?db], got: %s", dsn)
-	}
-
-	return nil
 }
 
 // AddDataOrigin adds a new data origin.
@@ -138,15 +115,34 @@ func GetDataOrigin(table string) (*DataOrigin, error) {
 
 // GetDB returns a database connection to a specific data origin.
 func (d *DataOrigin) GetDB() (*sql.DB, error) {
+	var db *sql.DB
+	var err error
+
 	if d.db != nil {
 		return d.db, nil
 	}
 
-	db, err := sql.Open(string(d.cfg.originType), d.cfg.dsn)
+	err = retry(func() error {
+		db, err = sql.Open(string(d.cfg.originType), d.cfg.dsn)
+		if err != nil {
+			return fmt.Errorf("sql error: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open connection to data origin: %w", err)
 	}
-	d.db = db
 
+	d.db = db
 	return db, nil
+}
+
+// ReadTopic returns the NATS topic name for subscribe to a table's updates.
+func (d *DataOrigin) ReadTopic() string {
+	return fmt.Sprintf("%s_table", d.schema.table)
+}
+
+// WriteTopic returns the NATS topic name for table writes.
+func (d *DataOrigin) WriteTopic() string {
+	return fmt.Sprintf("%s_write", d.schema.table)
 }

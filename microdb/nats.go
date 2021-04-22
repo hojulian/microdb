@@ -19,7 +19,7 @@ func NATSConnFromEnv() (stan.Conn, error) {
 	natsClusterID := os.Getenv("NATS_CLUSTER_ID")
 	natsClientID := os.Getenv("NATS_CLIENT_ID")
 
-	return NATSConn(natsHost, natsPort, natsClusterID, natsClientID, nil, nil)
+	return NATSConn(natsHost, natsPort, natsClusterID, natsClientID, nil, []nats.Option{nats.Name(natsClientID)})
 }
 
 // NATSConn creates a NATS connection.

@@ -5,12 +5,15 @@ package publisher
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/cenkalti/backoff/v3"
 	"github.com/nats-io/stan.go"
 	"github.com/siddontang/go-mysql/canal"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/hojulian/microdb/internal/proto"
+	"github.com/hojulian/microdb/microdb"
 )
 
 // Handler represents a data origin publisher.
@@ -21,7 +24,7 @@ type Handler interface {
 
 // MySQLPublisher represents a MySQL-based data origin publisher.
 type MySQLPublisher struct {
-	table string
+	topic string
 	c     *canal.Canal
 	sc    stan.Conn
 
@@ -63,7 +66,7 @@ func (m *MySQLPublisher) OnRow(e *canal.RowsEvent) error {
 			return fmt.Errorf("failed to marshal row update: %w", err)
 		}
 
-		if err := m.sc.Publish(m.table, p); err != nil {
+		if err := m.sc.Publish(m.topic, p); err != nil {
 			return fmt.Errorf("failed to publish row update: %w", err)
 		}
 	}
@@ -80,14 +83,38 @@ func MySQLHandler(host, port, user, password, database, table string, sc stan.Co
 	cfg.Dump.TableDB = database
 	cfg.Dump.Tables = []string{table}
 
-	c, err := canal.NewCanal(cfg)
-	if err != nil {
+	var c *canal.Canal
+	var err error
+
+	rerr := retry(func() error {
+		c, err = canal.NewCanal(cfg)
+		if err != nil {
+			return fmt.Errorf("canal error: %w", err)
+		}
+
+		return nil
+	})
+	if rerr != nil {
 		return nil, fmt.Errorf("failed to create canal client: %w", err)
 	}
 
+	do, err := microdb.GetDataOrigin(table)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data origin for table: %w", err)
+	}
+
 	return &MySQLPublisher{
-		table: table,
+		topic: do.ReadTopic(),
 		c:     c,
 		sc:    sc,
-	}, stan.ErrNilMsg
+	}, nil
+}
+
+//nolint // Internal method.
+func retry(op func() error) error {
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxInterval = time.Second * 5
+	bo.MaxElapsedTime = time.Minute
+
+	return backoff.Retry(op, bo)
 }

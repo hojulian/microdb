@@ -13,6 +13,7 @@ var schemaStore = make(map[string]*Schema)
 
 // Schema represents the SQL schema for a table.
 type Schema struct {
+	table            string
 	OriginTableQuery string
 	LocalTableQuery  string
 	InsertQuery      string
