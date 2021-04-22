@@ -6,9 +6,10 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/huandu/go-sqlbuilder"
-	// Register local database driver.
 	"github.com/go-sql-driver/mysql"
+	"github.com/huandu/go-sqlbuilder"
+
+	// Register local database driver.
 	_ "github.com/mattn/go-sqlite3"
 )
 

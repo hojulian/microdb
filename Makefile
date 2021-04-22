@@ -54,7 +54,7 @@ fmt: ## go fmt
 .PHONY: lint
 lint: ## golangci-lint
 	$(call print-target)
-	golangci-lint run --timeout 10m0s
+	golangci-lint run
 
 .PHONY: test
 test: ## go test with race detector and code covarage
