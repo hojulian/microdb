@@ -42,14 +42,15 @@ func (d *DataOriginType) toBuilderFlavor() sqlbuilder.Flavor {
 // DataOrigin represents a table in MicroDB.
 // For details, please refers to documentation.
 type DataOrigin struct {
-	schema *Schema
-	cfg    *dataOriginCfg
-	db     *sql.DB
+	Schema     *Schema        `yaml:"schema"`
+	Connection *ConnectionCfg `yaml:"connection"`
+	db         *sql.DB        `yaml:"-"`
 }
 
-type dataOriginCfg struct {
-	originType DataOriginType
-	dsn        string
+// ConnectionCfg represents all the info for connecting to the data origin.
+type ConnectionCfg struct {
+	OriginType DataOriginType `yaml:"type"`
+	Dsn        string         `yaml:"dsn"`
 }
 
 // DataOriginOption represents options for creating a DataOrigin.
@@ -64,27 +65,27 @@ func WithMySQLDataOrigin(host, port, user, password, database string, opt Schema
 			return nil, fmt.Errorf("invalid schema: %w", err)
 		}
 
-		cfg := mySQLDataOriginCfg(host, port, user, password, database)
+		cfg := mySQLConnectionCfg(host, port, user, password, database)
 
 		return &DataOrigin{
-			schema: s,
-			cfg:    cfg,
+			Schema:     s,
+			Connection: cfg,
 		}, nil
 	}
 }
 
-func mySQLDataOriginCfg(host, port, user, password, database string) *dataOriginCfg {
+func mySQLConnectionCfg(host, port, user, password, database string) *ConnectionCfg {
 	mCfg := mysql.NewConfig()
+	mCfg.Net = "tcp"
 	mCfg.Addr = fmt.Sprintf("%s:%s", host, port)
 	mCfg.User = user
 	mCfg.Passwd = password
 	mCfg.DBName = database
-
 	mCfg.ParseTime = true
 
-	return &dataOriginCfg{
-		originType: DataOriginTypeMySQL,
-		dsn:        mCfg.FormatDSN(),
+	return &ConnectionCfg{
+		OriginType: DataOriginTypeMySQL,
+		Dsn:        mCfg.FormatDSN(),
 	}
 }
 
@@ -100,7 +101,7 @@ func AddDataOrigin(table string, opt DataOriginOption) error {
 	}
 
 	dataOrigins[table] = d
-	schemaStore[table] = d.schema
+	schemaStore[table] = d.Schema
 	return nil
 }
 
@@ -124,7 +125,7 @@ func (d *DataOrigin) GetDB() (*sql.DB, error) {
 	}
 
 	err = retry(func() error {
-		db, err = sql.Open(string(d.cfg.originType), d.cfg.dsn)
+		db, err = sql.Open(string(d.Connection.OriginType), d.Connection.Dsn)
 		if err != nil {
 			return fmt.Errorf("sql error: %w", err)
 		}
@@ -140,10 +141,10 @@ func (d *DataOrigin) GetDB() (*sql.DB, error) {
 
 // ReadTopic returns the NATS topic name for subscribe to a table's updates.
 func (d *DataOrigin) ReadTopic() string {
-	return fmt.Sprintf("%s_table", d.schema.table)
+	return fmt.Sprintf("%s_table", d.Schema.Table)
 }
 
 // WriteTopic returns the NATS topic name for table writes.
 func (d *DataOrigin) WriteTopic() string {
-	return fmt.Sprintf("%s_write", d.schema.table)
+	return fmt.Sprintf("%s_write", d.Schema.Table)
 }

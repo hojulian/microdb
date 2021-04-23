@@ -13,10 +13,10 @@ var schemaStore = make(map[string]*Schema)
 
 // Schema represents the SQL schema for a table.
 type Schema struct {
-	table            string
-	OriginTableQuery string
-	LocalTableQuery  string
-	InsertQuery      string
+	Table            string `yaml:"table"`
+	OriginTableQuery string `yaml:"origin_table_query"`
+	LocalTableQuery  string `yaml:"local_table_query,omitempty"`
+	InsertQuery      string `yaml:"insert_query,omitempty"`
 }
 
 // SchemaOption represents options for creating a Schema.

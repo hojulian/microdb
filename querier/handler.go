@@ -1,21 +1,22 @@
 // Package querier contains library functions for MicroDB querier.
 package querier
 
-// Querier handler implementation.
-
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
+	"github.com/cenkalti/backoff/v3"
+	"github.com/go-sql-driver/mysql"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	"google.golang.org/protobuf/proto"
 
-	// Register database driver.
-	_ "github.com/siddontang/go-mysql/driver"
-
 	pb "github.com/hojulian/microdb/internal/proto"
+	"github.com/hojulian/microdb/microdb"
 )
+
+// Querier handler implementation.
 
 // Handler represents a data origin querier.
 type Handler interface {
@@ -25,7 +26,7 @@ type Handler interface {
 
 // MySQLQuerier represents a MySQL-based data origin querier.
 type MySQLQuerier struct {
-	table string
+	topic string
 	sc    stan.Conn
 	db    *sql.DB
 	sub   []*nats.Subscription
@@ -33,7 +34,7 @@ type MySQLQuerier struct {
 
 // Handle starts the subscriber for handling write and direct read queries.
 func (m *MySQLQuerier) Handle() error {
-	writeTopic := fmt.Sprintf("%s_write", m.table)
+	writeTopic := fmt.Sprintf("%s_write", m.topic)
 	wSub, err := m.sc.NatsConn().Subscribe(writeTopic, tableWriteHandler(m.sc, m.db))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to write query topic: %w", err)
@@ -64,17 +65,43 @@ func (m *MySQLQuerier) Close() error {
 
 // MySQLHandler returns a new instance of querier for MySQL-based data origin.
 func MySQLHandler(host, port, user, password, database, table string, sc stan.Conn) (Handler, error) {
-	dsn := fmt.Sprintf("%s:%s@%s:%s?%s", user, password, host, port, database)
-	db, err := sql.Open("mysql", dsn)
+	var db *sql.DB
+	var err error
+
+	dsn := mySQLDsn(user, password, host, port, database)
+	rerr := retry(func() error {
+		db, err = sql.Open("mysql", dsn)
+		if err != nil {
+			return fmt.Errorf("sql error: %w", err)
+		}
+		return nil
+	})
+	if rerr != nil {
+		return nil, fmt.Errorf("failed to connect to data origin: %w", rerr)
+	}
+
+	do, err := microdb.GetDataOrigin(table)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to data origin: %w", err)
+		return nil, fmt.Errorf("failed to get data origin for table: %w", err)
 	}
 
 	return &MySQLQuerier{
-		table: table,
+		topic: do.WriteTopic(),
 		sc:    sc,
 		db:    db,
 	}, nil
+}
+
+func mySQLDsn(host, port, user, password, database string) string {
+	mCfg := mysql.NewConfig()
+	mCfg.Net = "tcp"
+	mCfg.Addr = fmt.Sprintf("%s:%s", host, port)
+	mCfg.User = user
+	mCfg.Passwd = password
+	mCfg.DBName = database
+	mCfg.ParseTime = true
+
+	return mCfg.FormatDSN()
 }
 
 func tableWriteHandler(sc stan.Conn, db *sql.DB) func(*nats.Msg) {
@@ -118,4 +145,13 @@ func replyError(sc stan.Conn, originMsg *nats.Msg, errMsg string) error {
 	}
 
 	return nil
+}
+
+//nolint // Internal method.
+func retry(op func() error) error {
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxInterval = time.Second * 5
+	bo.MaxElapsedTime = time.Minute
+
+	return backoff.Retry(op, bo)
 }
