@@ -29,6 +29,7 @@ var (
 	TestTableName = tableNameTest
 	// TestSchemaOption represents option used for creating a test table origin.
 	TestSchemaOption = microdb.WithSchemaStrings(
+		tableNameTest,
 		microdb.DataOriginTypeMySQL,
 		testOGTableQuery,
 		testLocalTableQuery,

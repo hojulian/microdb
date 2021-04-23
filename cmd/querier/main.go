@@ -48,6 +48,8 @@ func main() {
 		log.Fatalf("failed to publish to table %s: %v", mysqlTable, err)
 	}
 
+	log.Printf("Querier for %s is ready.", mysqlTable)
+
 	s := make(chan os.Signal, 1)
 	signal.Notify(s,
 		os.Interrupt,

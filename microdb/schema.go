@@ -24,7 +24,11 @@ type SchemaOption func() (*Schema, error)
 
 // WithSchemaStrings creates option for a new schema using raw query strings.
 func WithSchemaStrings(
-	originType DataOriginType, originTableQuery, localTableQuery, localInsertQuery string) SchemaOption {
+	table string,
+	originType DataOriginType,
+	originTableQuery,
+	localTableQuery,
+	localInsertQuery string) SchemaOption {
 	return func() (*Schema, error) {
 		if originTableQuery == "" {
 			return nil, errors.New("missing origin table query")
@@ -39,6 +43,7 @@ func WithSchemaStrings(
 		}
 
 		return &Schema{
+			Table:            table,
 			OriginTableQuery: originTableQuery,
 			LocalTableQuery:  localTableQuery,
 			InsertQuery:      localInsertQuery,

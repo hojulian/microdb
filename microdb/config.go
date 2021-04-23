@@ -30,6 +30,7 @@ func AddDataOriginFromCfg(name string) error {
 
 	for t, do := range cfg.Origins {
 		dataOrigins[t] = do
+		schemaStore[t] = do.Schema
 	}
 
 	return nil
