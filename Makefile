@@ -46,6 +46,12 @@ build: ## go build
 	CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static" \
 		-o ./bin/microdb-querier ./cmd/querier/*.go
 
+.PHONY: build-docker
+build-docker: ## docker build
+	$(call print-target)
+	docker build -t microdb/querier:latest -f docker/tests/Dockerfile.querier .
+	docker build -t microdb/publisher:latest -f docker/tests/Dockerfile.publisher .
+
 .PHONY: fmt
 fmt: ## go fmt
 	$(call print-target)
