@@ -1,11 +1,10 @@
-FROM alpine:latest
+FROM alpine:3.10
 
 LABEL maintainer="Julian Ho <julianho@brandeis.edu>"
 
 RUN apk update && \
     apk add ca-certificates mariadb-client && \
     rm -rf /var/cache/apk/*
-
 
 COPY microdb-publisher /
 

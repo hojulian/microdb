@@ -20,6 +20,11 @@ func main() {
 	mysqlPassword := os.Getenv("MYSQL_PASSWORD")
 	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
 	mysqlTable := os.Getenv("MYSQL_TABLE")
+	dataOriginPath := os.Getenv("DATAORIGIN_CFG")
+
+	if err := microdb.AddDataOriginFromCfg(dataOriginPath); err != nil {
+		log.Fatalf("failed to parse data origin configs: %v", err)
+	}
 
 	sc, err := microdb.NATSConnFromEnv()
 	if err != nil {

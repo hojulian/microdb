@@ -38,7 +38,7 @@ dockers:
     - "microdb/publisher:latest"
     - "microdb/publisher:{{ .Tag }}"
     skip_push: false
-    dockerfile: Dockerfile.publisher
+    dockerfile: docker/releases/Dockerfile.publisher
     use_buildx: true
     build_flag_templates:
     - "--pull"
@@ -55,7 +55,7 @@ dockers:
     - "microdb/querier:latest"
     - "microdb/querier:{{ .Tag }}"
     skip_push: false
-    dockerfile: Dockerfile.querier
+    dockerfile: docker/releases/Dockerfile.querier
     use_buildx: true
     build_flag_templates:
     - "--pull"

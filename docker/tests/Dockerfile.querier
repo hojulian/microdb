@@ -1,11 +1,12 @@
-FROM alpine:latest
+FROM alpine:3.10
 
 LABEL maintainer="Julian Ho <julianho@brandeis.edu>"
 
 RUN apk update && \
-    apk add ca-certificates mariadb-client && \
+    apk add ca-certificates && \
     rm -rf /var/cache/apk/*
 
-COPY microdb-querier /
+COPY bin/microdb-querier /
+COPY internal/test/test_dataorigin.yaml /dataorigin.yaml
 
 ENTRYPOINT ["/microdb-querier"]

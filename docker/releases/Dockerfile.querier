@@ -1,0 +1,11 @@
+FROM alpine:3.10
+
+LABEL maintainer="Julian Ho <julianho@brandeis.edu>"
+
+RUN apk update && \
+    apk add ca-certificates && \
+    rm -rf /var/cache/apk/*
+
+COPY microdb-querier /
+
+ENTRYPOINT ["/microdb-querier"]
