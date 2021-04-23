@@ -29,6 +29,13 @@ func TestQuery(t *testing.T) {
 			requiredTables:  []string{"anacondas"},
 		},
 		{
+			desc:            "select from 1 table no alias",
+			q:               "SELECT id, string_type, int_type, float_type, bool_type, timestamp_type FROM test WHERE id = ?",
+			queryType:       query.QueryTypeSelect,
+			destinationType: query.DestinationTypeLocal,
+			requiredTables:  []string{"test"},
+		},
+		{
 			desc:            "select from 2 tables left join",
 			q:               "SELECT p.name FROM people p LEFT JOIN cities c ON p.city = c.name AND p.favorite_city = c.name",
 			queryType:       query.QueryTypeSelect,

@@ -68,7 +68,7 @@ func parseSelect(stmt *sqlparser.Select, qs *QueryStmt) error {
 	}
 
 	// Get required tables from query
-	if err := parseTableExpression(stmt.From[0], qs, true); err != nil {
+	if err := parseTableExpression(stmt.From[0], qs, false); err != nil {
 		return fmt.Errorf("failed to parse from query: %w", err)
 	}
 
