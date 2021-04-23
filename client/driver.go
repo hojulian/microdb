@@ -9,9 +9,7 @@ import (
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/nats-io/stan.go"
-	"google.golang.org/protobuf/proto"
 
-	pb "github.com/hojulian/microdb/internal/proto"
 	"github.com/hojulian/microdb/microdb"
 )
 
@@ -41,6 +39,7 @@ type driverCfg struct {
 }
 
 // Open returns a new connection to the database.
+//
 // The name is a string in a driver-specific format.
 // dsn format:
 //    natsClientID=... natsHost=... natsPort=... tables=...,...
@@ -48,6 +47,8 @@ type driverCfg struct {
 // Open may return a cached connection (one previously
 // closed), but doing so is unnecessary; the sql package
 // maintains a pool of idle connections for efficient re-use.
+//
+// This method blocks until the nats connection is ready.
 //
 // The returned connection is only used by one goroutine at a
 // time.
@@ -174,49 +175,20 @@ func (d *Driver) init() error {
 }
 
 func (d *Driver) subscribeTable(table string) error {
-	sub, err := d.sc.Subscribe(table, tableHandler(d.db, table), stan.DeliverAllAvailable())
+	do, err := microdb.GetDataOrigin(table)
+	if err != nil {
+		return fmt.Errorf("failed to get data origin for table: %w", err)
+	}
+
+	sub, err := d.sc.Subscribe(do.ReadTopic(), tableHandler(d.db, table), stan.DeliverAllAvailable())
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to nats: %w", err)
 	}
 
+	if d.tables == nil {
+		d.tables = make(map[string]stan.Subscription)
+	}
 	d.tables[table] = sub
-	return nil
-}
-
-func createTable(db *sql.DB, table string) error {
-	tq, err := microdb.LocalTableQuery(table)
-	if err != nil {
-		return fmt.Errorf("failed to get table schema query: %w", err)
-	}
-
-	_, err = db.Exec(tq)
-	if err != nil {
-		return fmt.Errorf("failed to execute query: %w", err)
-	}
 
 	return nil
-}
-
-func tableHandler(db *sql.DB, table string) stan.MsgHandler {
-	return func(m *stan.Msg) {
-		var ru pb.RowUpdate
-
-		if err := proto.Unmarshal(m.Data, &ru); err != nil {
-			panic(fmt.Errorf("failed to parse row update: %w", err))
-		}
-
-		iq, err := microdb.InsertQuery(table)
-		if err != nil {
-			panic(fmt.Errorf("failed to get insert query: %w", err))
-		}
-
-		r, err := db.Exec(iq, pb.UnmarshalValues(ru.GetRow())...)
-		if err != nil {
-			panic(fmt.Errorf("failed to execute query: %w", err))
-		}
-
-		if ra, err := r.RowsAffected(); ra == 0 || err != nil {
-			panic(fmt.Errorf("failed to update table: %w or no rows affected", err))
-		}
-	}
 }

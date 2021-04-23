@@ -73,15 +73,15 @@ func (c *Conn) Begin() (driver.Tx, error) {
 // Drivers must ensure all network calls made by Close
 // do not block indefinitely (e.g. apply a timeout).
 func (c *Conn) Close() error {
-	for _, t := range c.tables {
-		if err := t.Unsubscribe(); err != nil {
-			return fmt.Errorf("failed to unsubscribe table updates: %w", err)
-		}
-	}
+	// for _, t := range c.tables {
+	// 	if err := t.Unsubscribe(); err != nil {
+	// 		return fmt.Errorf("failed to unsubscribe table updates: %w", err)
+	// 	}
+	// }
 
-	if err := c.sqc.Close(); err != nil {
-		return fmt.Errorf("failed to close local sqlite3 connection: %w", err)
-	}
+	// if err := c.sqc.Close(); err != nil {
+	// 	return fmt.Errorf("failed to close local sqlite3 connection: %w", err)
+	// }
 
 	return nil
 }
