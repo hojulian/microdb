@@ -8,5 +8,5 @@ import (
 
 // Logger returns a new logger.
 func Logger(name string) *log.Logger {
-	return log.New(os.Stdout, name, log.Ltime|log.Lmicroseconds|log.Llongfile)
+	return log.New(os.Stdout, name+" ", log.Ltime|log.Lmicroseconds|log.Llongfile)
 }
