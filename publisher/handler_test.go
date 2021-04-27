@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Create publisher
-	pub, err := publisher.MySQLHandler("127.0.0.1", "3306", "root", "test", "test", "test", sc)
+	pub, err := publisher.MySQLHandler("127.0.0.1", "3306", "root", "test", "test", "test", 1, sc)
 	if err != nil {
 		log.Fatalf("failed to create publisher: %s", err)
 	}

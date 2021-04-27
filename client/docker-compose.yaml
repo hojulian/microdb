@@ -30,6 +30,7 @@ services:
       NATS_PORT: 4222
       NATS_CLUSTER_ID: nats-cluster
       NATS_CLIENT_ID: publisher-client-test
+      PUBLISHER_ID: 1
       DATAORIGIN_CFG: /dataorigin.yaml
     depends_on:
       - dataorigin
