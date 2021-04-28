@@ -82,6 +82,34 @@ func MarshalValue(i interface{}) *Value {
 			},
 		}
 
+	case uint:
+		return &Value{
+			TypedValue: &Value_Integer{
+				Integer: int64(v),
+			},
+		}
+
+	case uint16:
+		return &Value{
+			TypedValue: &Value_Integer{
+				Integer: int64(v),
+			},
+		}
+
+	case uint32:
+		return &Value{
+			TypedValue: &Value_Integer{
+				Integer: int64(v),
+			},
+		}
+
+	case uint64:
+		return &Value{
+			TypedValue: &Value_Integer{
+				Integer: int64(v),
+			},
+		}
+
 	case float32:
 		return &Value{
 			TypedValue: &Value_Decimal{
