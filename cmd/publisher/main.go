@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/hojulian/microdb/internal/logger"
 	"github.com/hojulian/microdb/microdb"
@@ -22,7 +23,7 @@ func main() {
 		mysqlUser      = os.Getenv("MYSQL_USER")
 		mysqlPassword  = os.Getenv("MYSQL_PASSWORD")
 		mysqlDatabase  = os.Getenv("MYSQL_DATABASE")
-		mysqlTable     = os.Getenv("MYSQL_TABLE")
+		mysqlTables    = os.Getenv("MYSQL_TABLES")
 		dataOriginPath = os.Getenv("DATAORIGIN_CFG")
 		id             = os.Getenv("PUBLISHER_ID")
 	)
@@ -34,6 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("publisher ID must be an integer")
 	}
+	tables := parseTablesString(mysqlTables)
 
 	if err = microdb.AddDataOriginFromCfg(dataOriginPath); err != nil {
 		log.Fatalf("failed to parse data origin configs: %v", err)
@@ -43,7 +45,7 @@ func main() {
 		natsHost,
 		natsPort,
 		natsClusterID,
-		fmt.Sprintf("publisher-%s-%d", mysqlTable, pid),
+		fmt.Sprintf("publisher-%s-%d", strings.Join(tables, "-"), pid),
 		nil,
 		nil,
 	)
@@ -57,19 +59,27 @@ func main() {
 		mysqlUser,
 		mysqlPassword,
 		mysqlDatabase,
-		mysqlTable,
 		uint32(pid),
 		sc,
+		tables...,
 	)
 	if err != nil {
 		log.Fatalf("failed to create mysql handler: %v", err)
 	}
 
 	if err := h.Handle(); err != nil {
-		log.Fatalf("failed to publish to table %s: %v", mysqlTable, err)
+		log.Fatalf("failed to publish to tables %s: %v", mysqlTables, err)
 	}
-
 	if err := h.Close(); err != nil {
 		log.Fatalf("failed to close connections: %v", err)
 	}
+}
+
+func parseTablesString(mysqlTables string) []string {
+	tables := []string{}
+	for _, t := range strings.Split(mysqlTables, ",") {
+		tables = append(tables, strings.TrimSpace(t))
+	}
+
+	return tables
 }

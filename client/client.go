@@ -108,7 +108,7 @@ func tableHandler(db *sql.DB, table string) stan.MsgHandler {
 
 		r, err := db.Exec(iq, pb.UnmarshalValues(ru.GetRow())...)
 		if err != nil {
-			panic(fmt.Errorf("failed to execute query: %w", err))
+			panic(fmt.Errorf("failed to execute query: %w, got: %s", err, ru.String()))
 		}
 
 		if ra, err := r.RowsAffected(); ra == 0 || err != nil {

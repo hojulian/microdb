@@ -24,9 +24,9 @@ type Handler interface {
 
 // MySQLPublisher represents a MySQL-based data origin publisher.
 type MySQLPublisher struct {
-	topic string
-	c     *canal.Canal
-	sc    stan.Conn
+	tableMapping map[string]string
+	c            *canal.Canal
+	sc           stan.Conn
 
 	canal.DummyEventHandler
 }
@@ -36,7 +36,13 @@ func (m *MySQLPublisher) Handle() error {
 	// Register a handler to handle RowsEvent
 	m.c.SetEventHandler(m)
 
-	if err := m.c.Run(); err != nil {
+	err := retry(func() error {
+		if err := m.c.Run(); err != nil {
+			return fmt.Errorf("canal error: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
 		return fmt.Errorf("failed to start handler: %w", err)
 	}
 
@@ -66,7 +72,7 @@ func (m *MySQLPublisher) OnRow(e *canal.RowsEvent) error {
 			return fmt.Errorf("failed to marshal row update: %w", err)
 		}
 
-		if err := m.sc.Publish(m.topic, p); err != nil {
+		if err := m.sc.Publish(m.tableMapping[e.Table.Name], p); err != nil {
 			return fmt.Errorf("failed to publish row update: %w", err)
 		}
 	}
@@ -75,13 +81,13 @@ func (m *MySQLPublisher) OnRow(e *canal.RowsEvent) error {
 }
 
 // MySQLHandler returns a new instance of publisher for MySQL-based data origin.
-func MySQLHandler(host, port, user, password, database, table string, id uint32, sc stan.Conn) (Handler, error) {
+func MySQLHandler(host, port, user, password, database string, id uint32, sc stan.Conn, tables ...string) (Handler, error) {
 	cfg := canal.NewDefaultConfig()
 	cfg.Addr = fmt.Sprintf("%s:%s", host, port)
 	cfg.User = user
 	cfg.Password = password
 	cfg.Dump.TableDB = database
-	cfg.Dump.Tables = []string{table}
+	cfg.Dump.Tables = tables
 	cfg.ServerID = id
 
 	var c *canal.Canal
@@ -99,15 +105,19 @@ func MySQLHandler(host, port, user, password, database, table string, id uint32,
 		return nil, fmt.Errorf("failed to create canal client: %w", err)
 	}
 
-	do, err := microdb.GetDataOrigin(table)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get data origin for table: %w", err)
+	mapping := make(map[string]string)
+	for _, t := range tables {
+		do, err := microdb.GetDataOrigin(t)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data origin for table: %w", err)
+		}
+		mapping[t] = do.ReadTopic()
 	}
 
 	return &MySQLPublisher{
-		topic: do.ReadTopic(),
-		c:     c,
-		sc:    sc,
+		tableMapping: mapping,
+		c:            c,
+		sc:           sc,
 	}, nil
 }
 

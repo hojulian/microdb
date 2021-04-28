@@ -14,12 +14,14 @@ import (
 
 // NATSConnFromEnv create a NATS connection from environment variables.
 func NATSConnFromEnv() (stan.Conn, error) {
-	natsHost := os.Getenv("NATS_HOST")
-	natsPort := os.Getenv("NATS_PORT")
-	natsClusterID := os.Getenv("NATS_CLUSTER_ID")
-	natsClientID := os.Getenv("NATS_CLIENT_ID")
+	var (
+		natsHost      = os.Getenv("NATS_HOST")
+		natsPort      = os.Getenv("NATS_PORT")
+		natsClusterID = os.Getenv("NATS_CLUSTER_ID")
+		natsClientID  = os.Getenv("NATS_CLIENT_ID")
+	)
 
-	return NATSConn(natsHost, natsPort, natsClusterID, natsClientID, nil, []nats.Option{nats.Name(natsClientID)})
+	return NATSConn(natsHost, natsPort, natsClusterID, natsClientID, nil, nil)
 }
 
 // NATSConn creates a NATS connection.
@@ -27,6 +29,8 @@ func NATSConn(host, port, clusterID, clientID string, sOpts []stan.Option, nOpts
 	var nc *nats.Conn
 	var sc stan.Conn
 	var err error
+
+	nOpts = append(nOpts, nats.Name(clientID))
 
 	url := fmt.Sprintf("nats://%s:%s", host, port)
 	nerr := retry(func() error {

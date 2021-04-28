@@ -25,7 +25,7 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: test
       MYSQL_DATABASE: test
-      MYSQL_TABLE: test
+      MYSQL_TABLES: test
       NATS_HOST: nats
       NATS_PORT: 4222
       NATS_CLUSTER_ID: nats-cluster
