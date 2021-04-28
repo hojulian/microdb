@@ -109,17 +109,17 @@ func tableWriteHandler(sc stan.Conn, db *sql.DB) func(*nats.Msg) {
 
 		if err := proto.Unmarshal(m.Data, &req); err != nil {
 			errMsg := fmt.Errorf("failed to unmarshal write request: %w", err).Error()
-			if rerr := replyError(sc, m, errMsg); err != nil {
-				panic(fmt.Errorf("failed to publish error reply: %w", rerr))
+			if rerr := replyError(sc, m, errMsg); rerr != nil {
+				panic(fmt.Errorf("failed to publish error reply: %w: %s", rerr, errMsg))
 			}
 			return
 		}
 
 		r, err := db.Exec(req.Query, pb.UnmarshalValues(req.Args)...)
 		if err != nil {
-			errMsg := fmt.Errorf("failed to execute database query: %w", err).Error()
-			if rerr := replyError(sc, m, errMsg); err != nil {
-				panic(fmt.Errorf("failed to publish error reply: %w", rerr))
+			errMsg := fmt.Errorf("failed to execute database query: %w got: %s", err, &req.Args).Error()
+			if rerr := replyError(sc, m, errMsg); rerr != nil {
+				panic(fmt.Errorf("failed to publish error reply: %w: %s", rerr, errMsg))
 			}
 			return
 		}
@@ -127,8 +127,8 @@ func tableWriteHandler(sc stan.Conn, db *sql.DB) func(*nats.Msg) {
 		ra, err := r.RowsAffected()
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get rows affected: %w", err).Error()
-			if rerr := replyError(sc, m, errMsg); err != nil {
-				panic(fmt.Errorf("failed to publish error reply: %w", rerr))
+			if rerr := replyError(sc, m, errMsg); rerr != nil {
+				panic(fmt.Errorf("failed to publish error reply: %w: %s", rerr, errMsg))
 			}
 			return
 		}
@@ -136,8 +136,8 @@ func tableWriteHandler(sc stan.Conn, db *sql.DB) func(*nats.Msg) {
 		lid, err := r.LastInsertId()
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get last insert id: %w", err).Error()
-			if rerr := replyError(sc, m, errMsg); err != nil {
-				panic(fmt.Errorf("failed to publish error reply: %w", rerr))
+			if rerr := replyError(sc, m, errMsg); rerr != nil {
+				panic(fmt.Errorf("failed to publish error reply: %w: %s", rerr, errMsg))
 			}
 			return
 		}
@@ -154,8 +154,8 @@ func tableWriteHandler(sc stan.Conn, db *sql.DB) func(*nats.Msg) {
 		pm, err := proto.Marshal(res)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to marshal reply: %w", err).Error()
-			if rerr := replyError(sc, m, errMsg); err != nil {
-				panic(fmt.Errorf("failed to publish error reply: %w", rerr))
+			if rerr := replyError(sc, m, errMsg); rerr != nil {
+				panic(fmt.Errorf("failed to publish error reply: %w: %s", rerr, errMsg))
 			}
 			return
 		}
@@ -177,7 +177,7 @@ func replyError(sc stan.Conn, originMsg *nats.Msg, errMsg string) error {
 		return fmt.Errorf("failed to marshal error reply: %w", err)
 	}
 
-	if err := sc.Publish(originMsg.Reply, pm); err != nil {
+	if err := sc.NatsConn().Publish(originMsg.Reply, pm); err != nil {
 		return fmt.Errorf("failed to publish reply: %w", err)
 	}
 

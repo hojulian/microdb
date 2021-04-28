@@ -17,9 +17,7 @@ func MarshalValues(is []interface{}) []*Value {
 	vs := make([]*Value, 0, len(is))
 	for _, i := range is {
 		v := MarshalValue(i)
-		if v != nil {
-			vs = append(vs, v)
-		}
+		vs = append(vs, v)
 	}
 	return vs
 }
@@ -144,7 +142,7 @@ func MarshalValue(i interface{}) *Value {
 		}
 	}
 
-	return nil
+	return &Value{TypedValue: &Value_Null{}}
 }
 
 // UnmarshalValues unmarshals an array of MicroDB value types into Go types.
@@ -153,9 +151,7 @@ func UnmarshalValues(vs []*Value) []interface{} {
 
 	for _, v := range vs {
 		i := v.GetInterface()
-		if v != nil {
-			is = append(is, i)
-		}
+		is = append(is, i)
 	}
 	return is
 }

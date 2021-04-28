@@ -81,7 +81,8 @@ func (m *MySQLPublisher) OnRow(e *canal.RowsEvent) error {
 }
 
 // MySQLHandler returns a new instance of publisher for MySQL-based data origin.
-func MySQLHandler(host, port, user, password, database string, id uint32, sc stan.Conn, tables ...string) (Handler, error) {
+func MySQLHandler(host, port, user, password, database string,
+	id uint32, sc stan.Conn, tables ...string) (Handler, error) {
 	cfg := canal.NewDefaultConfig()
 	cfg.Addr = fmt.Sprintf("%s:%s", host, port)
 	cfg.User = user

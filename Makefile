@@ -52,12 +52,6 @@ build-docker: ## docker build
 	docker build -t microdb/querier:latest -f docker/releases/Dockerfile.querier .
 	docker build -t microdb/publisher:latest -f docker/releases/Dockerfile.publisher .
 
-.PHONY: build-test-docker
-build-docker: ## docker build
-	$(call print-target)
-	docker build -t microdb/querier:latest -f docker/tests/Dockerfile.querier .
-	docker build -t microdb/publisher:latest -f docker/tests/Dockerfile.publisher .
-
 .PHONY: fmt
 fmt: ## go fmt
 	$(call print-target)
