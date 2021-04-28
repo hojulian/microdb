@@ -91,7 +91,7 @@ func parseInsert(stmt *sqlparser.Insert, qs *QueryStmt) error {
 
 func parseUpdate(stmt *sqlparser.Update, qs *QueryStmt) error {
 	for _, expr := range stmt.TableExprs {
-		if err := parseTableExpression(expr, qs, true); err != nil {
+		if err := parseTableExpression(expr, qs, false); err != nil {
 			return fmt.Errorf("failed to parse table expression in query: %w", err)
 		}
 	}
@@ -132,11 +132,11 @@ func parseAliasedTableExpression(expr *sqlparser.AliasedTableExpr, qs *QueryStmt
 }
 
 func parseJoinTableExpression(expr *sqlparser.JoinTableExpr, qs *QueryStmt) error {
-	if err := parseTableExpression(expr.LeftExpr, qs, true); err != nil {
+	if err := parseTableExpression(expr.LeftExpr, qs, false); err != nil {
 		return fmt.Errorf("couldn't parse join left table expression: %w", err)
 	}
 
-	if err := parseTableExpression(expr.RightExpr, qs, true); err != nil {
+	if err := parseTableExpression(expr.RightExpr, qs, false); err != nil {
 		return fmt.Errorf("couldn't parse join right table expression: %w", err)
 	}
 
