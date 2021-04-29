@@ -106,14 +106,27 @@ func tableHandler(db *sql.DB, table string) stan.MsgHandler {
 			panic(fmt.Errorf("failed to get insert query: %w", err))
 		}
 
-		r, err := db.Exec(iq, pb.UnmarshalValues(ru.GetRow())...)
+		tx, err := db.Begin()
 		if err != nil {
-			panic(fmt.Errorf("failed to update local databse for table %s: %w, got: %s",
-				table, err, ru.String()))
+			panic(fmt.Errorf("failed to create update transaction: %w", err))
+		}
+
+		r, err := tx.Exec(iq, pb.UnmarshalValues(ru.GetRow())...)
+		if err != nil {
+			derr := fmt.Errorf("failed to update local databse for table %s: %w, got: %s",
+				table, err, ru.String())
+			if rerr := tx.Rollback(); rerr != nil {
+				panic(fmt.Errorf("failed to rollback transaction: %w for error: %s",
+					rerr, derr.Error()))
+			}
 		}
 
 		if ra, err := r.RowsAffected(); ra == 0 || err != nil {
 			panic(fmt.Errorf("failed to update table: %w or no rows affected", err))
+		}
+
+		if err := tx.Commit(); err != nil {
+			panic(fmt.Errorf("failed commit update to table: %w", err))
 		}
 	}
 }
