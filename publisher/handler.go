@@ -64,7 +64,7 @@ func (m *MySQLPublisher) Close() error {
 func (m *MySQLPublisher) OnRow(e *canal.RowsEvent) error {
 	for _, r := range e.Rows {
 		update := &pb.RowUpdate{
-			Row: pb.MarshalValues(r),
+			Row: pb.MarshalCanalValues(e.Table, r),
 		}
 
 		p, err := proto.Marshal(update)

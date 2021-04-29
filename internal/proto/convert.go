@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"time"
 
+	"github.com/siddontang/go-mysql/schema"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -34,10 +35,46 @@ func MarshalDriverValues(args []driver.NamedValue) []*Value {
 	return vs
 }
 
+// MarshalCanalValues marshals an array of canal values into MicroDB value types.
+func MarshalCanalValues(table *schema.Table, is []interface{}) []*Value {
+	vs := make([]*Value, 0, len(is))
+	for i, e := range is {
+		v := MarshalCanalValue(table.Columns[i].Type, e)
+		vs = append(vs, v)
+	}
+	return vs
+}
+
+// MarshalCanalValue marshals a canal values into a MicroDB value type.
+func MarshalCanalValue(colType int, v interface{}) *Value {
+	switch colType {
+	case schema.TYPE_STRING:
+		return MarshalValue(v)
+
+	case schema.TYPE_NUMBER:
+		return MarshalValue(v)
+
+	case schema.TYPE_DECIMAL, schema.TYPE_FLOAT:
+		return MarshalValue(v)
+
+	case schema.TYPE_DATE, schema.TYPE_DATETIME:
+		return MarshalValue(v)
+	}
+
+	return &Value{TypedValue: &Value_Null{}}
+}
+
 // MarshalValue marshals any Go type into a MicroDB value type.
 //nolint // Allow longer method accounts for all data types.
 func MarshalValue(i interface{}) *Value {
 	switch v := i.(type) {
+	case []byte:
+		return &Value{
+			TypedValue: &Value_Varchar{
+				Varchar: string(v),
+			},
+		}
+
 	case string:
 		return &Value{
 			TypedValue: &Value_Varchar{
