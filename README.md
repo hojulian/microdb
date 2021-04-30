@@ -17,3 +17,30 @@ This is part of MicroDB research 2020-2021.
 
 ## Use
 
+```go
+package main
+
+import (
+    "context"
+
+    "github.com/hojulian/microdb/client"
+    "github.com/hojulian/microdb/microdb"
+)
+
+func main() {
+    // Read data origin configurations from file.
+    if err := microdb.AddDataOriginFromCfg("./dataorigin.yaml"); err != nil {
+
+    }
+
+    // Start microdb client.
+    c, err := client.Connect("127.0.0.1", "4222", "test-client", "test-cluster", "test_table")
+    if err != nil {
+        // ...
+    }
+    defer c.Close()
+
+    c.Query(context.Background(), query, args...)
+    c.Exec(context.Background(), query, args...)
+}
+```

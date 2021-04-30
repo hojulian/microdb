@@ -1,5 +1,4 @@
-// Package test provides library functions for testing MicroDB system.
-package test
+package test //nolint // Package comment located in a different file.
 
 import "github.com/hojulian/microdb/microdb"
 

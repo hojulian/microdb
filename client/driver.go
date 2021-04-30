@@ -1,5 +1,4 @@
-// Package client represents a MicroDB client
-package client
+package client //nolint // Package comment located in a different file.
 
 import (
 	"database/sql"

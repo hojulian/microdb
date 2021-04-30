@@ -1,6 +1,4 @@
-// Package query provides query building and parsing functionalities used by both MicroDB client
-// and external users.
-package query
+package query //nolint // Package comment located in a different file.
 
 import (
 	"errors"

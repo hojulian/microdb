@@ -1,4 +1,4 @@
-// Package client represents a MicroDB client
+// Package client represents a MicroDB client.
 package client
 
 import (
