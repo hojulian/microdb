@@ -31,6 +31,7 @@ func NATSConn(host, port, clusterID, clientID string, sOpts []stan.Option, nOpts
 	var err error
 
 	nOpts = append(nOpts, nats.Name(clientID))
+	sOpts = append(sOpts, stan.PubAckWait(time.Minute))
 
 	url := fmt.Sprintf("nats://%s:%s", host, port)
 	nerr := retry(func() error {
