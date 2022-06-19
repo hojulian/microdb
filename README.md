@@ -9,7 +9,7 @@ This is part of MicroDB research 2020-2021.
 ## Research
 
 - [Talk](https://youtu.be/vE_--8faZkE)
-- [Paper](.)
+- [Paper](https://search.library.brandeis.edu/permalink/01BRAND_INST/nmaao4/alma9923987793901921)
 
 ## Benchmark
 
