@@ -6,7 +6,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/containerd/continuity v0.0.0-20210315143101-93e15499afd5 // indirect
-	github.com/cube2222/octosql v0.3.0
+	github.com/cube2222/octosql v0.9.3
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/gofuzz v1.2.0
@@ -23,15 +23,11 @@ require (
 	github.com/pingcap/parser v3.1.2+incompatible // indirect
 	github.com/pingcap/tipb v0.0.0-20210326161441-1164ca065d1b // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/siddontang/go-log v0.0.0-20190221022429-1e957dd83bed // indirect
 	github.com/siddontang/go-mysql v1.1.1
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc // indirect
-	golang.org/x/net v0.0.0-20210415231046-e915ea6b2b7d // indirect
-	golang.org/x/sys v0.0.0-20210415045647-66c3f260301c // indirect
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
